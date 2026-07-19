@@ -72,7 +72,6 @@ pub enum AppEvent {
 
     // ── URL-bar / title sync ──────────────────────────────────────────────────
     UpdateUrlBar(String),
-    UpdateTitle(String),
 
     // ── UI panel events ───────────────────────────────────────────────────────
     OpenSettings,

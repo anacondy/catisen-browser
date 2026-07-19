@@ -1,4 +1,4 @@
-﻿//! Core wry browser — real DOM/BOM/JS rendering via WebKitGTK (Linux).
+//! Core wry browser — real DOM/BOM/JS rendering via WebKitGTK (Linux).
 //!
 //! # What was dead, and what is now wired
 //!
@@ -472,10 +472,6 @@ window.setLoading = function() {
                         .next()
                         .unwrap_or(&url);
                     window.set_title(&format!("{} — Catisen", short));
-                }
-
-                AppEvent::UpdateTitle(title) => {
-                    window.set_title(&format!("{} — Catisen", title));
                 }
 
                 // ── Settings overlay ──────────────────────────────────────────

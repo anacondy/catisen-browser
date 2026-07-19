@@ -1,6 +1,5 @@
 mod browser;
 mod config;
-mod extensions;
 mod history;
 mod libcurl_download_manager;
 mod network;
@@ -10,7 +9,6 @@ mod sandbox;
 mod sync_chain;
 mod tab_isolation;
 mod text_mode;
-mod tor_proxy;
 mod ublock_integration;
 
 // Previously dead: privacy/stealth, privacy/tor_manager — now used in browser::run()
@@ -97,7 +95,7 @@ fn headless_pipeline(config: &CatisenConfig, run_network: bool) {
                 if ok { "(correct)" } else { "(WRONG)" });
         }
     }
-    if (!run_network) {
+    if !run_network {
         println!("  HEADLESS_SMOKE_OK: network tests skipped (--no-network)");
         return;
     }
