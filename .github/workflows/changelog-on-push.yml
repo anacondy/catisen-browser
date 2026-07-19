@@ -1,0 +1,24 @@
+name: Auto Changelog on Push to Main
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Append changelog
+        run: |
+          echo "\n## $(date -u +'%Y-%m-%d %H:%M UTC') - ${{ github.sha }}" >> wiki/CHANGELOG_HISTORY.md
+          echo "**Commit Message:** ${{ github.event.head_commit.message }}" >> wiki/CHANGELOG_HISTORY.md
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add wiki/CHANGELOG_HISTORY.md
+          git commit -m "docs: auto-update changelog [skip ci]" || echo "No changes"
+          git push

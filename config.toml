@@ -1,0 +1,13 @@
+tor_proxy_url        = "socks5h://127.0.0.1:9150"
+use_tor_by_default   = false
+fingerprint_level    = "strict"
+browser_profile      = "auto_desktop"
+geo_location         = "disabled"
+default_view_mode    = "source"
+request_timeout_secs = 30
+request_retries      = 1
+ublock_rules_path    = "assets/easylist.txt"
+theme                = "dark"
+home_page            = "https://duckduckgo.com"
+target_fps           = 60
+fps_telemetry        = false

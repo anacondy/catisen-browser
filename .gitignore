@@ -1,0 +1,22 @@
+target/
+**/*.rs.bk
+*.exe
+*.pdb
+*.log
+run_err*.txt
+.cache/
+*.bak
+.DS_Store
+**/*.tmp
+Cargo.lock
+
+# Patch-script backups
+*.bak-*
+/target/
+/.cache/
+/.continue/
+/.agents/
+/.catisen_history.json
+/run_err*.txt
+*.bak2-*
+/attached_assets/

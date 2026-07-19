@@ -1,0 +1,22 @@
+# Catisen torrc example
+# This is a starter template for local tor.exe usage with Catisen.
+# Copy and adjust paths for your environment.
+
+SocksPort 9050
+ControlPort 9051
+CookieAuthentication 1
+
+# Optional hardening
+SafeLogging 1
+AvoidDiskWrites 1
+
+# Optional bridges (replace placeholders with valid bridge lines)
+UseBridges 1
+ClientTransportPlugin obfs4 exec C:\\path\\to\\obfs4proxy.exe
+Bridge obfs4 <bridge-line-1>
+Bridge obfs4 <bridge-line-2>
+Bridge obfs4 <bridge-line-3>
+
+# Optional exit constraints (example)
+# ExitNodes {de},{nl},{ch}
+# StrictNodes 0

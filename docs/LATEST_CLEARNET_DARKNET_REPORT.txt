@@ -1,0 +1,22 @@
+CATISEN CLEARNET/DARKNET REPORT
+Generated: 2026-04-05 11.09.21
+Tor Proxy: socks5h://127.0.0.1:9150
+
+Target: Mozilla (Clearnet)
+URL: https://www.mozilla.org
+Tor Enabled: False
+Result: PASS | status=200 | full=745ms | bytes=48492
+REQ: [REQ] ts=11:09:27 status=200 bytes=48492 mode=Text-Only tor=false ttfb=732 ttfc=736 ttfr=760 tti=785 full=745 url=https://www.mozilla.org headers=connection: keep-alive | x-timer: S1775367566.979930,VS0,VE412 | referrer-policy: strict-origin-when-cross-origin | etag: "80cba29b53293b62f2b07547419e95d3"
+
+Target: Example (Clearnet)
+URL: https://example.com
+Tor Enabled: False
+Result: FAIL_HTTP | status=0 | bytes=0
+REQ: [REQ] ts=11:09:28 status=0 bytes=0 mode=ERROR tor=false ttfb=766 ttfc=766 ttfr=766 tti=766 full=766 url=https://example.com headers=error: Network request failed for https://example.com on attempt 2/2: error sending request for url (https://example.com/)
+
+Target: Ahmia (Darknet)
+URL: http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion
+Tor Enabled: True
+Result: PASS | status=200 | full=9056ms | bytes=4727
+REQ: [REQ] ts=11:09:42 status=200 bytes=4727 mode=Text-Only tor=true ttfb=9052 ttfc=9054 ttfr=9071 tti=9096 full=9056 url=http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion headers=server: nginx/1.22.1 | date: Sun, 05 Apr 2026 05:39:41 GMT | content-type: text/html; charset=utf-8 | transfer-encoding: chunked
+
