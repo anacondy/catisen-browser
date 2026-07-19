@@ -6,7 +6,7 @@
 pub mod windows_sandbox {
     // Uses Windows Job Objects to strictly limit the process capabilities
     pub fn engage_strict_sandbox() -> Result<(), String> {
-        println!("🛡️ WINDOWS SANDBOX: Engaging strict Job Object limitations.");
+        println!("🛡️ Warning: Windows process sandbox is not implemented.");
         // In a full implementation, we would use winapi or windows-rs 
         // to call CreateJobObjectW, SetInformationJobObject (ActiveProcessLimit=1, JobObjectBasicUIRestrictions),
         // and AssignProcessToJobObject.
@@ -19,7 +19,7 @@ pub mod windows_sandbox {
 pub mod linux_sandbox {
     // Uses Seccomp-bpf to deny system calls (e.g., executing arbitrary binaries)
     pub fn engage_strict_sandbox() -> Result<(), String> {
-        println!("🛡️ LINUX SANDBOX: Engaging strict Seccomp-BPF filters.");
+        println!("🛡️ Warning: Linux process sandbox is not implemented.");
         // In a full implementation, we would use the `seccomp` crate to drop PR_SET_NO_NEW_PRIVS, 
         // clone into a new namespace, and block syscalls like execve.
         Ok(())
@@ -29,7 +29,7 @@ pub mod linux_sandbox {
 #[cfg(not(any(target_os = "windows", target_os = "linux")))]
 pub mod generic_sandbox {
     pub fn engage_strict_sandbox() -> Result<(), String> {
-        println!("⚠️ GENERIC SANDBOX: Process isolation not fully supported on this OS yet.");
+        println!("⚠️ Warning: process sandbox is not implemented on this OS.");
         Ok(())
     }
 }

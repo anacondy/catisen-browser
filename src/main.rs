@@ -42,7 +42,7 @@ fn main() {
         // Non-fatal — we continue rather than refuse to start, but the warning
         // lets the user know the process is not fully isolated.
     } else {
-        eprintln!("[Catisen] Process sandbox engaged.");
+        eprintln!("[Catisen] Warning: sandbox status is not verified; browser is running without a proven process sandbox.");
     }
 
     let config = CatisenConfig::load_or_create().unwrap_or_default();
