@@ -25,6 +25,7 @@ use sandbox::SandboxManager;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let headless = args.iter().any(|a| a == "--headless");
+    let no_network = args.iter().any(|a| a == "--no-network");
 
     // ── Sandbox: lock down process capabilities ───────────────────────────────
     //
@@ -49,7 +50,7 @@ fn main() {
     let config = CatisenConfig::load_or_create().unwrap_or_default();
 
     if headless {
-        headless_pipeline(&config);
+        headless_pipeline(&config, !no_network);
         return;
     }
 
@@ -62,7 +63,7 @@ fn main() {
 // ─── Headless pipeline ────────────────────────────────────────────────────────
 // Runs on servers / CI with no display (Replit, GitHub Actions, etc.).
 // Exercises the full privacy stack: Tor check, ad blocker, HTTP fetch, scraper.
-fn headless_pipeline(config: &CatisenConfig) {
+fn headless_pipeline(config: &CatisenConfig, run_network: bool) {
     println!();
     println!("🦊 Catisen Browser starting…");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -95,6 +96,10 @@ fn headless_pipeline(config: &CatisenConfig) {
             println!("      {mark} {url:<52} → {label}  {}",
                 if ok { "(correct)" } else { "(WRONG)" });
         }
+    }
+    if (!run_network) {
+        println!("  HEADLESS_SMOKE_OK: network tests skipped (--no-network)");
+        return;
     }
 
     // ── Network fetch ─────────────────────────────────────────────────────────
