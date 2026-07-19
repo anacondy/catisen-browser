@@ -20,3 +20,5 @@ Cargo.lock
 /run_err*.txt
 *.bak2-*
 /attached_assets/
+/file.bin
+/test.bin
