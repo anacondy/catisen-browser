@@ -6,6 +6,7 @@ mod network;
 mod permissions;
 mod privacy;
 mod sandbox;
+mod security_policy;
 mod sync_chain;
 mod tab_isolation;
 mod text_mode;

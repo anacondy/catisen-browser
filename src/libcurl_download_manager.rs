@@ -94,14 +94,17 @@ impl DownloadManager {
             // instead of plain Socks5 because it resolves the hostname inside
             // the proxy — preventing a DNS leak where the local network could
             // see which domain is being downloaded even if the bytes are hidden.
+            // P0 9.5: fail-closed proxy — abort instead of falling through to clearnet
             if let Some(ref proxy_addr) = tor_proxy_copy {
                 if let Err(e) = easy.proxy(proxy_addr) {
-                    eprintln!("[Download] Warning: could not set proxy {}: {}", proxy_addr, e);
-                } else if let Err(e) = easy.proxy_type(ProxyType::Socks5Hostname) {
-                    eprintln!("[Download] Warning: could not set proxy type: {}", e);
-                } else {
-                    println!("🧅 DOWNLOAD via Tor ({}): {}", proxy_addr, url_clone);
+                    eprintln!("[Download] ERROR: could not set proxy {}: {} — aborting to avoid clearnet leak", proxy_addr, e);
+                    return;
                 }
+                if let Err(e) = easy.proxy_type(ProxyType::Socks5Hostname) {
+                    eprintln!("[Download] ERROR: could not set proxy type: {} — aborting to avoid clearnet leak", e);
+                    return;
+                }
+                println!("🧅 DOWNLOAD via Tor ({}): {}", proxy_addr, url_clone);
             } else {
                 println!("🚀 STARTING direct download: {}", url_clone);
             }

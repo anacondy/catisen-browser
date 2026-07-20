@@ -65,6 +65,9 @@ use crate::tab_isolation::TabManager;
 // Previously dead: ReaderMode was declared but never constructed or toggled.
 use crate::text_mode::{ReaderMode, ReaderTheme};
 use crate::ublock_integration::get_adblocker;
+use crate::security_policy::{
+    downloads_dir, ipc_origin_allowed, is_navigable, normalize_url, sanitize_download_path,
+};
 
 /// Entry point for the full GUI browser.
 ///
@@ -278,9 +281,10 @@ window.setLoading = function() {
 
         // Native ad/tracker blocking at the navigation level.
         // Also enforces geolocation permission denial for HTTP sites via PermissionManager.
+        // P0 9.1: strict scheme + creds check via is_navigable (kills javascript:/data:/blob:/file:/about: + user:pass@)
         .with_navigation_handler(move |url: String| {
-            // Block javascript: URIs (XSS vector)
-            if url.starts_with("javascript:") {
+            if !is_navigable(&url) {
+                eprintln!("[Security] Blocked non-navigable URL: {}", url);
                 return false;
             }
 
@@ -328,6 +332,10 @@ window.setLoading = function() {
         // back to the opener will not complete under same-tab redirect.
         // Real borderless popup support is separate future work.
         .with_new_window_req_handler(move |req_url: String| {
+            if !is_navigable(&req_url) {
+                eprintln!("[Security] Blocked new-window non-navigable URL: {}", req_url);
+                return false;
+            }
             eprintln!("[Catisen] New-window request -> same-tab nav: {}", req_url);
             proxy_newwin.send_event(AppEvent::Navigate(req_url)).ok();
             false
@@ -340,7 +348,12 @@ window.setLoading = function() {
         })
 
         // IPC: toolbar JS → Rust event loop.
+        // P0 9.3: authenticate IPC origin — block dangerous schemes, but allow unparseable platform URIs
         .with_ipc_handler(move |req: Request<String>| {
+            if !ipc_origin_allowed(&req.uri().to_string()) {
+                eprintln!("[Security] Blocked IPC from disallowed origin: {}", req.uri());
+                return;
+            }
             let msg = req.into_body();
             match serde_json::from_str::<IpcMsg>(&msg) {
                 Ok(parsed) => {
@@ -400,10 +413,15 @@ window.setLoading = function() {
             Event::UserEvent(app_event) => match app_event {
 
                 // ── Navigate ──────────────────────────────────────────────────
+                // P0 9.1: enforce navigable check even on AppEvent path (defense-in-depth)
                 AppEvent::Navigate(raw) => {
                     let url = normalize_url(&raw);
-                    eprintln!("[Catisen] Navigating → {}", url);
-                    let _ = webview.load_url(&url);
+                    if !is_navigable(&url) {
+                        eprintln!("[Security] Blocked Navigate to non-navigable URL: {}", url);
+                    } else {
+                        eprintln!("[Catisen] Navigating → {}", url);
+                        let _ = webview.load_url(&url);
+                    }
                 }
 
                 // ── Back / Forward / Reload ───────────────────────────────────
@@ -566,15 +584,28 @@ window.setLoading = function() {
                 }
 
                 // ── Start Download (libcurl_download_manager.rs) ──────────────
-                // Previously dead: DownloadManager.start_download() was never called from
-                // the runtime (no IPC entry point existed).  Also, the old signature had
-                // no tor_proxy parameter — downloads always went over clearnet.
-                //
-                // Now: StartDownload IPC calls start_download() and passes active_tor_proxy
-                // so downloads route through Tor (ProxyType::Socks5Hostname) when enabled.
+                // P0 9.2: confine download path via sanitize_download_path + downloads_dir()
+                // P0 9.1: require is_navigable
                 AppEvent::StartDownload { url, path } => {
-                    eprintln!("[Download] Starting: {} → {} | proxy={:?}", url, path, active_tor_proxy);
-                    download_manager.start_download(&url, &path, active_tor_proxy.clone());
+                    if !is_navigable(&url) {
+                        eprintln!("[Security] Blocked download from non-navigable URL: {}", url);
+                        return;
+                    }
+                    let base = downloads_dir();
+                    if let Err(e) = std::fs::create_dir_all(&base) {
+                        eprintln!("[Download] Could not create downloads dir {:?}: {}", base, e);
+                        return;
+                    }
+                    match sanitize_download_path(&path, &base) {
+                        Ok(confined) => {
+                            let confined_str = confined.to_string_lossy().to_string();
+                            eprintln!("[Download] Starting: {} → {} | proxy={:?}", url, confined_str, active_tor_proxy);
+                            download_manager.start_download(&url, &confined_str, active_tor_proxy.clone());
+                        }
+                        Err(e) => {
+                            eprintln!("[Security] Rejected download path {:?}: {}", path, e);
+                        }
+                    }
                 }
 
                 // ── Ad blocker toggle ─────────────────────────────────────────
@@ -729,16 +760,4 @@ fn extract_domain(url: &str) -> Option<String> {
         .trim_start_matches("http://");
     let domain = without_scheme.split('/').next()?;
     if domain.is_empty() { None } else { Some(domain.to_string()) }
-}
-
-/// Normalise raw address-bar input into a fully-qualified URL.
-fn normalize_url(input: &str) -> String {
-    let s = input.trim();
-    if s.is_empty() { return "https://duckduckgo.com".to_string(); }
-    if s.contains("://") { return s.to_string(); }
-    if !s.contains(' ') && (s.contains('.') || s.starts_with("localhost")) {
-        return format!("https://{}", s);
-    }
-    let q = s.split_whitespace().collect::<Vec<_>>().join("+");
-    format!("https://duckduckgo.com/?q={}", q)
 }
