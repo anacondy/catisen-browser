@@ -19,7 +19,7 @@ CAT BRO is a small (~4,000 lines of Rust) wry/tao embedded-WebView browser shell
 |---|---|
 | Is the repo clean & structured? | **Moderate.** Source tree is clean and well-commented; docs/wiki are polluted with ~20 legacy-era artifacts describing a different product. |
 | Technical depth | **Low–moderate.** It is a WebView shell over platform engines (WebKitGTK/WebView2), with JS-injection-based privacy features. No engine work, no renderer isolation, no real tab model. |
-| Does it build & pass its own tests? | Its 10 unit tests + 1 headless smoke test are self-consistent and should pass (verified by reasoning + partial execution; see §3). **The project's own CI cannot currently pass on a stock runner** (see §3.2). |
+| Does it build & pass its own tests? | Its 10 unit tests + 1 headless smoke test are self-consistent and should pass on a properly provisioned developer machine (verified by reasoning + partial execution; see §3). **The project's own CI was triggered by this audit and failed in 21 s at `cargo check`** — the repo has never had a green build gate (§3.2). |
 | Are the tests enough? | **No — 3/10.** 11 tests total, zero coverage of the browser runtime, IPC, navigation, toolbar, security policy, or platform behavior. |
 | Cross-platform (Windows + Linux)? | **Partial on paper, unproven in CI.** Code targets both; CI builds neither properly; Wayland and macOS are gaps. |
 | Can you sign in to Google? | **Not reliably — mostly no.** Google blocks OAuth in embedded WebViews, and CAT BRO's popup handling breaks OAuth popup flows by design. |
@@ -126,18 +126,27 @@ Notable contradictions found [executed comparison]:
 **Which tests pass easily:** all 11, when the crate compiles — they are deliberately deterministic and network-free (this was an explicit P0 cleanup, and it was done well).
 **Which tests would *not* pass:** none fail by design — but that is the problem: the test suite was made green by *removing* the hard assertions (the old external-network integration test was deleted as "stale"), so green ≠ browser works.
 
-### 3.2 Real CI evidence — GitHub Actions [executed]
+### 3.2 Real CI evidence — GitHub Actions [executed on 2026-07-20]
 
-`.github/workflows/ci.yml` runs `cargo check` and `cargo build` on `ubuntu-latest` **without installing WebKitGTK/GTK dev packages and without running `cargo test`**:
+`.github/workflows/ci.yml` runs `cargo check` and `cargo build` on `ubuntu-latest` **without installing WebKitGTK/GTK dev packages and without running `cargo test`**. This audit pushed the branch and triggered that exact workflow via a probe PR ([#2](https://github.com/anacondy/catisen-browser/pull/2)).
 
-> **Result:** *(this section is updated with the observed CI outcome of the PR that delivers this report — see the PR conversation and check runs; at the time of writing, `gh run list` shows the workflow had never successfully run in the repository's history at all.)*
+> **Observed result — run [#29773551224](https://github.com/anacondy/catisen-browser/actions/runs/29773551224): ❌ FAILURE in 21 s.**
+>
+> | Step | Outcome |
+> |---|---|
+> | Set up job / checkout / Install Rust | ✅ success |
+> | **`Cargo check`** | ❌ **failure — "Process completed with exit code 101"** |
+> | `Cargo build` | ⏭️ skipped (never reached) |
+>
+> Exit code 101 is cargo's hard-error exit. With no `apt` install step in the workflow, the failure is consistent with the first GTK/WebKit sys-crate build script (`webkit2gtk-sys`/`soup3-sys` via pkg-config) being unable to find `webkit2gtk-4.1`, which wry 0.38 requires ([wry 0.38 dependency list](https://docs.rs/wry/0.38.0/wry/struct.WebViewBuilder.html)). (Raw log streaming was unavailable from the audit sandbox — the Actions log host is outside its network allowlist — so the failing crate is inferred from the step, exit code, and workflow contents rather than quoted.)
 
-Key structural CI findings regardless of outcome:
+**Conclusions from real CI evidence:**
 
-1. wry 0.38 on Linux requires `webkit2gtk-4.1`/`libsoup-3` via pkg-config ([wry 0.38 dependency list](https://docs.rs/wry/0.38.0/wry/struct.WebViewBuilder.html)). A stock `ubuntu-latest` image does not guarantee the `-4.1-dev` packages → `cargo check` is at risk of failing at `webkit2gtk-sys` unless the runner happens to carry them.
-2. **There is no Windows job** in CI, while the README's only *verified platform* is Windows/WebView2. The verified platform is never built by CI.
-3. **CI never runs `cargo test`** — the 11 tests are not gated.
-4. No `cargo fmt --check`, no clippy, no artifact upload.
+1. **The repository's own CI is red.** The project has no green build gate: at delivery time `gh run list` showed *no successful workflow runs in the repository's entire history*.
+2. The README's "cargo check: PASS / cargo test: PASS" is only true on a developer machine with WebKitGTK pre-installed — **it is not reproducible by the project's own automation.**
+3. **There is no Windows job** in CI, while the README's only *verified platform* is Windows/WebView2. The verified platform is never built by CI.
+4. **CI never runs `cargo test`** — the 11 tests are not gated.
+5. No `cargo fmt --check`, no clippy, no artifact upload, and the workflow itself uses Node-20 actions now deprecated by GitHub (warning annotation on the same run).
 
 ### 3.3 Checks actually executed in this audit
 
@@ -408,7 +417,7 @@ Severity scale: 🔴 critical · 🟠 high · 🟡 medium · ⚪ low/information
 | Structure & architecture | 6/10 | Sensible module layout; no policy/egress/lifecycle centralization; JS-in-page chrome is fragile |
 | Technical depth | 4/10 | Thin WebView shell; no engine, no isolation, no real tabs, no service workers/persistence strategy |
 | Test maturity | 3/10 | §4 |
-| Build health | ~5/10 | Self-reported green; ~35 warnings; clippy-fail; CI structurally broken/absent |
+| Build health | 3/10 | Self-reported green on a dev machine, but **the project's own CI is red** (confirmed: run #29773551224 fails at `cargo check`, exit 101); ~35 warnings; clippy-fail; no Windows job |
 | Feature completeness (browser) | 3/10 | One real tab, no zoom, no downloads UI, no extensions, no real isolation |
 | Ad blocking | 2.5/10 | Right engine, 0.2% of data, wrong interception layer, tested regex gaps |
 | Privacy/anti-fingerprint | 3/10 | JS-only spoofs, inconsistent, stale UAs, clearnet leaks |
@@ -442,6 +451,7 @@ wc/grep assets/easylist.txt               → 296 lines / 165 '||' rules / 0 '##
 12**12                                    → 8,916,100,448,256 combinations = 43.0 bits
 gh api compare main...migration           → migration is 5 commits ahead, 0 behind
 gh run list                               → no successful workflow runs in repo history at delivery time
+gh run view 29773551224                   → probe CI run: FAILED, step "Cargo check" exit code 101, "Cargo build" skipped (21 s total) — run: https://github.com/anacondy/catisen-browser/actions/runs/29773551224
 ```
 
 **External references:** wry 0.38 API ([docs.rs](https://docs.rs/wry/0.38.0/wry/struct.WebViewBuilder.html)) · Chrome 150 current ([whatismybrowser](https://www.whatismybrowser.com/guides/the-latest-version/chrome), [fosspost](https://fosspost.org/chrome-version-history/)) · Speedometer/MotionMark/JetStream data ([zdnet](https://www.zdnet.com/home-and-office/work-life/i-speed-tested-11-browsers-and-the-fastest-might-surprise-you/), [cloudwards 2026](https://www.cloudwards.net/fastest-browser/)) · Google embedded-WebView OAuth policy ([WebView2Feedback#1647](https://github.com/MicrosoftEdge/WebView2Feedback/issues/1647), [truelink](https://truelink-group.com/en/blog/why-google-login-fails-in-line-facebook-in-app-browsers-2026/), [ServiceNow KB](https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB0623491), [pake#1148](https://github.com/tw93/pake/issues/1148)) · WebKitGTK DRM ([debugpoint](https://www.debugpoint.com/gnome-web-update/), [fedora thread](https://www.reddit.com/r/Fedora/comments/186ox3d/epiphany_with_extension_and_netflix_support/)) · WebKitGTK advisories ([WSA-2026-0004](https://webkitgtk.org/security/WSA-2026-0004.html), [WSA-2025-0004](https://webkitgtk.org/security/WSA-2025-0004.html), [errata](https://errata.almalinux.org/8/ALSA-2026-10702.html)) · filter-list scale ([yokoffing](https://github.com/yokoffing/filterlists), [Universalizer](https://github.com/Universalizer/Universal-FilterLists)) · glib unsoundness ([wry advisories](https://github.com/tauri-apps/wry/releases)).
