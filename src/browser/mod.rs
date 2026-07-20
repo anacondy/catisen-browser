@@ -52,7 +52,7 @@ use crate::browser::ipc::{AppEvent, IpcMsg};
 use crate::config::CatisenConfig;
 use crate::history::HistoryEngine;
 use crate::libcurl_download_manager::DownloadManager;
-use crate::permissions::{PermissionManager, PermissionState, PermissionType};
+use crate::permissions::{normalize_origin, PermissionManager, PermissionState, PermissionType};
 use crate::privacy::stealth::{pick_user_agent, BrowserProfile};
 // Previously dead: detect_tor_proxy_status and maybe_probe_tor_route were never called.
 // Now: detect_tor_proxy_status() replaces the plain config.tor_proxy_url read at startup
@@ -289,19 +289,16 @@ window.setLoading = function() {
             }
 
             // ── Permission gate for HTTP sites ────────────────────────────────
-            // PermissionManager.set_permission() already hard-denies hardware access
-            // for non-HTTPS domains (see permissions.rs security policy).  We call it
-            // here inside the navigation handler so the Rust-side record is updated
-            // the moment WebKit starts loading a new page — before any JS runs.
+            // §9.8: HTTP auto-deny now done here based on parsed scheme, not inside set_permission.
+            // set_permission stores under normalized host (normalize_origin) so set/query agree.
             if url.starts_with("http://") && !url.contains(".onion") {
                 if let Ok(mut pm) = pm_for_nav.lock() {
-                    let domain = extract_domain(&url).unwrap_or_else(|| url.clone());
-                    // set_permission() auto-denies for HTTP — the call is the wire-up,
-                    // not a no-op: it stores the denial in the site_permissions map so
-                    // future query_permission() calls return Denied for this domain.
-                    pm.set_permission(&domain, PermissionType::Geolocation, PermissionState::Denied);
-                    pm.set_permission(&domain, PermissionType::Camera,      PermissionState::Denied);
-                    pm.set_permission(&domain, PermissionType::Microphone,  PermissionState::Denied);
+                    let domain = normalize_origin(&url);
+                    if !domain.is_empty() && domain != "*" {
+                        pm.set_permission(&domain, PermissionType::Geolocation, PermissionState::Denied);
+                        pm.set_permission(&domain, PermissionType::Camera,      PermissionState::Denied);
+                        pm.set_permission(&domain, PermissionType::Microphone,  PermissionState::Denied);
+                    }
                 }
             }
 
@@ -458,7 +455,7 @@ window.setLoading = function() {
                     // than a real location — closing the gap between the Rust record and
                     // in-page API access.
                     if url.starts_with("http://") && !url.contains(".onion") {
-                        let domain = extract_domain(&url).unwrap_or_else(|| url.clone());
+                        let domain = normalize_origin(&url);
                         // query_permission confirms the state in the Rust record
                         let denied = permission_manager.lock()
                             .map(|pm| pm.query_permission(&domain, PermissionType::Geolocation)
@@ -754,6 +751,8 @@ fn reader_mode_enable_js(reader: &ReaderMode) -> String {
 
 /// Extract just the `host:port` (or `host`) portion of a URL, for use as a
 /// permission-manager domain key.
+/// Deprecated: use `normalize_origin` from `permissions.rs` (lowercases, strips port).
+#[allow(dead_code)]
 fn extract_domain(url: &str) -> Option<String> {
     let without_scheme = url
         .trim_start_matches("https://")

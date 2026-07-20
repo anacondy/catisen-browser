@@ -58,9 +58,12 @@ pub fn toggle_debug_panel_js() -> String {
     background:#161b22!important; }`;
     (document.head || document.documentElement).appendChild(s);
 
+    // §9.7 XSS fix: build with textContent, not innerHTML — location.href / title may be attacker-controlled
     function row(k, v, cls) {
         const d = document.createElement('div'); d.className = 'row';
-        d.innerHTML = `<span class="k">${k}</span><span class="v ${cls||''}">${v}</span>`; return d;
+        const ks = document.createElement('span'); ks.className = 'k'; ks.textContent = k;
+        const vs = document.createElement('span'); vs.className = 'v' + (cls ? ' ' + cls : ''); vs.textContent = v;
+        d.appendChild(ks); d.appendChild(vs); return d;
     }
     function sec(t) { const s = document.createElement('span'); s.className='st'; s.textContent=t; return s; }
 
@@ -71,8 +74,8 @@ pub fn toggle_debug_panel_js() -> String {
     const h2 = document.createElement('h2'); h2.textContent='🦊 Catisen Debug Panel'; panel.appendChild(h2);
 
     panel.appendChild(sec('Page'));
-    panel.appendChild(row('URL', location.href.slice(0,60)+(location.href.length>60?'…':'')));
-    panel.appendChild(row('Title', (document.title||'(none)').slice(0,40)));
+    panel.appendChild(row('URL', location.href.slice(0,80)+(location.href.length>80?'…':'')));
+    panel.appendChild(row('Title', (document.title||'(none)').slice(0,80)));
     panel.appendChild(row('Protocol', location.protocol, location.protocol==='https:'?'':'w'));
     panel.appendChild(row('Toolbar', document.getElementById('__cat_bar')?'✅ present':'❌ missing',
         document.getElementById('__cat_bar')?'':'e'));
@@ -168,10 +171,13 @@ pub fn open_settings_panel_js() -> String {
         return el;
     }
 
+    // §9.7 also fix settings row to use textContent (defense-in-depth)
     function row(label, desc, control) {
         const r = document.createElement('div'); r.className = 'sr';
         const lc = document.createElement('div');
-        lc.innerHTML = `<div class="sl">${label}</div><div class="sd">${desc}</div>`;
+        const sl = document.createElement('div'); sl.className='sl'; sl.textContent=label;
+        const sd = document.createElement('div'); sd.className='sd'; sd.textContent=desc;
+        lc.appendChild(sl); lc.appendChild(sd);
         r.appendChild(lc); if (control) r.appendChild(control); return r;
     }
 
@@ -198,11 +204,6 @@ pub fn open_settings_panel_js() -> String {
 
     // ── Tor section ───────────────────────────────────────────────────────────
     panel.appendChild(sec('Tor Routing'));
-    // ── Tor routing — Windows transparency label ───────────────────────────────
-    // Previously: the toggle said "Proxy WebView traffic via SOCKS5h" — misleading
-    // on Windows because WebView2 does NOT respect SOCKS5 environment variables.
-    // Now: label explicitly states the platform limitation so Windows users are
-    // not deceived into believing their browsing is anonymised through Tor.
     panel.appendChild(row('Tor (Downloads Only on Windows)',
         'Linux: WebView + downloads route via SOCKS5h (set before WebView build). ' +
         'Windows (WebView2): env vars ignored — only libcurl downloads use Tor. ' +
@@ -210,30 +211,22 @@ pub fn open_settings_panel_js() -> String {
         tog('cs_tor', false, on => ipc({ t:'set_tor', enabled:on }))));
 
     // ── Reading section ───────────────────────────────────────────────────────
-    // Previously: ReaderMode in text_mode.rs was dead code — no UI entry point.
-    // Now: this toggle fires IpcMsg::ToggleReaderMode which calls ReaderMode::toggle()
-    // in browser/mod.rs and injects the reader CSS transform into the active page.
     panel.appendChild(sec('Reader Mode'));
     panel.appendChild(row('Text-only / Reader View',
         'Strip scripts, ads, and heavy media — clean typography (Ctrl+R)',
         tog('cs_reader', false, on => ipc({ t:'reader' }))));
 
     // ── Permissions section ───────────────────────────────────────────────────
-    // Previously: PermissionManager in permissions.rs was dead code — set_permission()
-    // was never called.  These controls are now the call site.
+    // §9.8 fix: use location.hostname for per-site permission, not '*' no-op
     panel.appendChild(sec('Hardware Permissions'));
-    panel.appendChild(row('Geolocation',
-        'Deny geolocation to all HTTP sites (enforced by Catisen)',
-        tog('cs_geo', false, on => ipc({ t:'set_permission', domain:'*', permission:'geolocation', state: on?'granted':'denied' }))));
+    panel.appendChild(row('Geolocation (this site)',
+        'Allow/deny geolocation for current site (HTTP auto-denied)',
+        tog('cs_geo', false, on => ipc({ t:'set_permission', domain: location.hostname || '*', permission:'geolocation', state: on?'granted':'denied' }))));
     panel.appendChild(row('Camera & Microphone',
         'Default: deny to all sites unless explicitly granted',
-        null /* informational row */));
+        null));
 
     // ── Sync Chain section ────────────────────────────────────────────────────
-    // Previously: SyncChain in sync_chain.rs was dead code — generate_new_identity()
-    // and generate_visual_qr_matrix() were never called.
-    // Now: the button below fires IpcMsg::ShowSyncChain which calls both methods
-    // in browser/mod.rs and displays the QR code as an inline modal.
     panel.appendChild(sec('Device Sync'));
     const syncBtn = document.createElement('button');
     syncBtn.className = 'action-btn';
