@@ -32,9 +32,30 @@ pub fn normalize_url(input: &str) -> String {
 /// * Scheme must be http or https only (Url parser lower-cases, so case-insensitive)
 /// * username must be empty and password must be None (reject creds-in-URL)
 /// * host must be present and non-empty
+/// * Additionally, reject empty authority like "https:///path" via manual check
 ///
 /// This kills javascript:, data:, blob:, file:, about:, etc., plus credentialed URLs.
 pub fn is_navigable(raw: &str) -> bool {
+    // Manual empty-authority guard: catches "https:///path" and "https://" even if url crate is lenient
+    if let Some(pos) = raw.find("://") {
+        let after = &raw[pos + 3..];
+        if after.is_empty() {
+            return false;
+        }
+        // host is up to first '/' '?' '#'
+        let host_part = after
+            .split(&['/', '?', '#'][..])
+            .next()
+            .unwrap_or("");
+        if host_part.is_empty() {
+            return false;
+        }
+        // Also reject if authority starts with "/" (should have been caught by empty host, but explicit)
+        if after.starts_with('/') {
+            return false;
+        }
+    }
+
     let parsed = match url::Url::parse(raw) {
         Ok(u) => u,
         Err(_) => return false,
@@ -52,6 +73,10 @@ pub fn is_navigable(raw: &str) -> bool {
     match parsed.host_str() {
         Some(h) if !h.is_empty() => {},
         _ => return false,
+    }
+    // Extra: ensure host() is Some, not just host_str
+    if parsed.host().is_none() {
+        return false;
     }
     true
 }
@@ -130,14 +155,15 @@ mod tests {
     fn test_normalize_with_scheme() {
         assert_eq!(normalize_url("https://example.com"), "https://example.com");
         assert_eq!(normalize_url("http://example.com/path"), "http://example.com/path");
-        // Per spec, anything containing "://" is returned as-is (validation later)
+        // Per spec, anything containing "://" is returned as-is (validation later via is_navigable)
         assert_eq!(normalize_url("file:///etc/passwd"), "file:///etc/passwd");
-        assert_eq!(normalize_url("javascript:alert(1)"), "javascript:alert(1)");
-        // Note: javascript: doesn't contain "://", so it would go to other branches — test that:
-        // Actually "javascript:alert(1)" contains "://"? no. So it would be search fallback.
-        // That's fine; is_navigable will still kill it.
-        // For "://" case:
         assert_eq!(normalize_url("ftp://example.com"), "ftp://example.com");
+        assert_eq!(normalize_url("http://localhost:3000"), "http://localhost:3000");
+        // javascript: does NOT contain "://", so goes to search fallback (blocked later by is_navigable)
+        assert_eq!(
+            normalize_url("javascript:alert(1)"),
+            "https://duckduckgo.com/?q=javascript:alert(1)"
+        );
     }
 
     #[test]
@@ -239,17 +265,29 @@ mod tests {
     #[test]
     fn test_sanitize_reject_separators() {
         let base = Path::new("downloads");
-        // file_name() removes '/', but spec says reject if basename contains '/' '\' or '\0'
-        // For backslash on Unix, file_name may keep it; we test via direct string that includes null
-        // Null byte case:
+        // NUL byte must always be rejected
         let with_nul = "file\0name.txt";
-        // Path::new handles it as part of OsStr; our check should reject because contains '\0'
         assert!(sanitize_download_path(with_nul, base).is_err());
 
-        // Also test that file_name containing '\' is rejected (on Unix, "\" is valid filename char,
-        // but per spec we must reject it)
-        // On Unix, "a\\b" file_name is "a\\b" which contains '\'
-        assert!(sanitize_download_path("a\\b", base).is_err());
+        // Backslash handling is platform-dependent:
+        // - On Unix, Path::new("a\\b").file_name() == "a\\b" which contains '\' => should be rejected
+        // - On Windows, Path::new("a\\b").file_name() == "b" (backslash is separator) => confined, not rejected
+        #[cfg(not(windows))]
+        {
+            assert!(sanitize_download_path("a\\b", base).is_err());
+        }
+        #[cfg(windows)]
+        {
+            let out = sanitize_download_path("a\\b", base).unwrap();
+            assert_eq!(out, PathBuf::from("downloads/b"));
+            assert!(out.starts_with(base));
+        }
+
+        // Forward slash is stripped by file_name on both platforms, so "a/b" => "b" (allowed, confined)
+        // The spec's '/' rejection applies to basename itself containing '/', which file_name never does.
+        // So we test that "a/b/c.txt" is confined, not err.
+        let out = sanitize_download_path("a/b/c.txt", base).unwrap();
+        assert_eq!(out, PathBuf::from("downloads/c.txt"));
     }
 
     #[test]
