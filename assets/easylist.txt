@@ -1,0 +1,296 @@
+! EasyList — bundled core rules for Catisen ad blocker
+! Full list: https://easylist.to/easylist/easylist.txt
+! This list has been extended with rules targeting gaming-site ad networks,
+! DDG overlay blockers, popup ad networks, and additional tracker domains.
+! The adblock crate (uBlock Origin engine) parses this format natively.
+
+! === Google Ads / Analytics ===
+||google-analytics.com^
+||googletagmanager.com^
+||googletagservices.com^
+||googlesyndication.com^
+||pagead2.googlesyndication.com^
+||adservice.google.com^
+||adservice.google.*^
+||doubleclick.net^
+||ad.doubleclick.net^
+||cm.g.doubleclick.net^
+||googleads.g.doubleclick.net^
+||stats.g.doubleclick.net^
+||securepubads.g.doubleclick.net^
+||tpc.googlesyndication.com^
+
+! === Facebook / Meta Tracking ===
+||connect.facebook.net^
+||facebook.com/tr^
+||pixel.facebook.com^
+||analytics.facebook.com^
+
+! === Twitter / X Ads ===
+||ads.twitter.com^
+||analytics.twitter.com^
+||ads-twitter.com^
+||t.co/*/click^
+
+! === Microsoft Clarity / Bing Ads ===
+||clarity.ms^
+||bat.bing.com^
+||ads.bing.com^
+||bingads.microsoft.com^
+
+! === Amazon Ads ===
+||amazon-adsystem.com^
+||aax.amazon-adsystem.com^
+||c.amazon-adsystem.com^
+||fls-na.amazon-adsystem.com^
+||s.amazon-adsystem.com^
+
+! === Criteo ===
+||criteo.com^
+||criteo.net^
+||static.criteo.net^
+||rtax.criteo.com^
+||sslwidget.criteo.com^
+
+! === Outbrain ===
+||outbrain.com^
+||widgets.outbrain.com^
+||log.outbrain.com^
+||odb.outbrain.com^
+||amplify.outbrain.com^
+
+! === Taboola ===
+||taboola.com^
+||cdn.taboola.com^
+||trc.taboola.com^
+||nr-data.taboola.com^
+
+! === AppNexus / Xandr ===
+||appnexus.com^
+||adnxs.com^
+||ib.adnxs.com^
+||secure.adnxs.com^
+
+! === OpenX ===
+||openx.net^
+||openx.com^
+||delivery.openx.net^
+||ox-d.openx.net^
+
+! === Rubicon Project ===
+||rubiconproject.com^
+||fastlane.rubiconproject.com^
+||eus.rubiconproject.com^
+
+! === PubMatic ===
+||pubmatic.com^
+||image2.pubmatic.com^
+||simage2.pubmatic.com^
+||ads.pubmatic.com^
+
+! === Casale Media / Index Exchange ===
+||casalemedia.com^
+||indexexchange.com^
+||srtb.casalemedia.com^
+
+! === The Trade Desk / Adsrvr ===
+||adsrvr.org^
+||match.adsrvr.org^
+||use.adsrvr.org^
+
+! === Liveramp / AddThis / Shareaholic (social trackers that serve ads) ===
+||addthis.com^
+||shareaholic.com^
+||liveramp.com^
+||rlcdn.com^
+||idsync.rlcdn.com^
+
+! === 33Across ===
+||33across.com^
+||sic.33across.com^
+
+! === Moat Analytics (Oracle) ===
+||moatads.com^
+||moat.com^
+||px.moatads.com^
+
+! === Quantcast / Quantserve ===
+||quantserve.com^
+||pixel.quantserve.com^
+||secure.quantserve.com^
+||quantcount.com^
+
+! === Chartbeat ===
+||chartbeat.com^
+||chartbeat.net^
+||mab.chartbeat.com^
+||static.chartbeat.com^
+
+! === ScoreCard Research / Comscore ===
+||scorecardresearch.com^
+||beacon.scorecardresearch.com^
+||comscore.com^
+||sb.scorecardresearch.com^
+
+! === Advertising.com / AOL/Oath ads ===
+||advertising.com^
+||adtech.de^
+||adlegend.com^
+
+! === Zedo ===
+||zedo.com^
+||c6.zedo.com^
+
+! === PopAds / PopCash (popup ad networks) ===
+||popads.net^
+||popcash.net^
+||cdn.popads.net^
+
+! === PropellerAds ===
+||propellerads.com^
+||cdn.propellerads.com^
+||p.propellerads.com^
+
+! === Adsterra ===
+||adsterra.com^
+||s.adsterra.com^
+||o.adsterra.com^
+
+! === ExoClick (video/adult ad network also used on mainstream gaming sites) ===
+||exoclick.com^
+||syndication.exoclick.com^
+||static.exoclick.com^
+
+! === BidVertiser ===
+||bidvertiser.com^
+||brid.tv^
+
+! === YLlix ===
+||yllix.com^
+||cdn.yllix.com^
+
+! === TrafficJunky ===
+||trafficjunky.com^
+||trafficjunky.net^
+
+! === Media.net (Yahoo Ads) ===
+||media.net^
+||contextual.media.net^
+||adservetx.media.net^
+
+! === AdForm ===
+||adform.net^
+||adform.com^
+||track.adform.net^
+
+! === Sizmek / Amazon DSP ===
+||sizmek.com^
+||mediamind.com^
+||bs.serving-sys.com^
+
+! === Smart AdServer ===
+||smartadserver.com^
+||cdn.smartadserver.com^
+
+! === Lotame ===
+||crwdcntrl.net^
+||lotame.com^
+
+! === Pubstack ===
+||pubstack.io^
+
+! === Sonobi ===
+||sonobi.com^
+
+! === Sharethrough ===
+||sharethrough.com^
+||native.sharethrough.com^
+
+! === SpotX (streaming/video ad network) ===
+||spotx.tv^
+||spotxchange.com^
+||cdn.spotx.tv^
+||search.spotxchange.com^
+
+! === Kargo ===
+||kargo.com^
+
+! === Sortable ===
+||sortable.com^
+
+! === Gravity4 / Grapeshot (Oracle data cloud) ===
+||grapeshot.co.uk^
+||gravity4.com^
+
+! === Swoop ===
+||swoop.com^
+
+! === Visible Measures ===
+||visiblemeasures.com^
+
+! === Integral Ad Science (IAS — ad viewability tracking) ===
+||integralads.com^
+||pixel.adsafeprotected.com^
+||fw.adsafeprotected.com^
+
+! === DoubleVerify ===
+||doubleverify.com^
+||cdn.doubleverify.com^
+
+! === BrandSafe / PerformLine ===
+||performline.com^
+
+! === TripleLift (native ads) ===
+||triplelift.com^
+||tlx.3lift.com^
+||eb2.3lift.com^
+
+! === Unruly / News Corp SSP ===
+||unrulymedia.com^
+||video.unruly.co^
+
+! === Dailymotion Ads ===
+||dmxleo.com^
+
+! === Yieldmo ===
+||yieldmo.com^
+
+! === GumGum ===
+||gumgum.com^
+||c2shb.gumgum.com^
+
+! === Gaming site–specific ad scripts ===
+! These are frequently seen on gaming aggregator sites (cartoongames.net, etc.)
+||gamelinkads.com^
+||gamemonetize.com^
+||cdn.gamemonetize.com^
+||games-cdn.com^
+||ads.gamepix.com^
+||api.gamepix.com^
+||gamedistribution.com/rvx^
+||html5games.com/ads^
+||||cdn.gamezop.com^
+
+! === Popup/overlay generic patterns ===
+! Block common popup domains that don't have specific entries above
+/popup-ads/*
+/popunder/*
+/pop-ads/*
+*/show_ads*
+*/adserve*
+*/ad-manager*
+
+! === Tracking pixel patterns ===
+*/beacon.gif*
+*/track.php*
+*/pixel.gif?*
+*/impression.gif*
+/1x1.gif
+/track.js
+/tracking.js
+/analytics.js$domain=~analytics.google.com
+
+! === Cookie consent / GDPR walls that load tracking ===
+||cdn.cookielaw.org^
+||cdn.privacy-mgmt.com^
+||geolocation.onetrust.com^
