@@ -715,14 +715,15 @@ pub fn privacy_init_js(ua: &str, platform: &str, language: &str, timezone: &str)
         }};
 
         // ── Canvas fingerprint noise ───────────────────────────────────────────
-        // Adds a single imperceptible pixel of noise before toDataURL() is called.
+        // §9.9: per-session seed (once per page load, not random per call) — deterministic per session, less fingerprintable
+        const _catCanvasSeed = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
         const _origToDU = HTMLCanvasElement.prototype.toDataURL;
         HTMLCanvasElement.prototype.toDataURL = function (...args) {{
             const ctx = this.getContext('2d');
             if (ctx) {{
                 ctx.save();
                 ctx.globalAlpha = 0.004;
-                ctx.fillStyle   = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6,'0');
+                ctx.fillStyle   = _catCanvasSeed;
                 ctx.fillRect(0, 0, 1, 1);
                 ctx.restore();
             }}

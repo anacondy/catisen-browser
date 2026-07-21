@@ -53,7 +53,8 @@ use crate::config::CatisenConfig;
 use crate::history::HistoryEngine;
 use crate::libcurl_download_manager::DownloadManager;
 use crate::permissions::{normalize_origin, PermissionManager, PermissionState, PermissionType};
-use crate::privacy::stealth::{pick_user_agent, BrowserProfile};
+use crate::privacy::stealth::{pick_profile, pick_user_agent, BrowserProfile};
+use wry::{ProxyConfig, ProxyEndpoint};
 // Previously dead: detect_tor_proxy_status and maybe_probe_tor_route were never called.
 // Now: detect_tor_proxy_status() replaces the plain config.tor_proxy_url read at startup
 // so we get actual TCP reachability validation; maybe_probe_tor_route() runs on a
@@ -135,21 +136,28 @@ pub fn run(config: CatisenConfig) -> Result<(), Box<dyn std::error::Error>> {
     // we still set env vars if configured so WebKit can fail gracefully).
     let active_tor_proxy: Option<String> = resolve_tor_for_session(&config);
 
-    if let Some(ref proxy) = active_tor_proxy {
-        // Set env vars BEFORE building the WebView — WebKitGTK on Linux picks these up
-        // when its network stack initialises.  (On Windows/WebView2, env vars have no
-        // effect; see the module-level doc comment above for the Windows gap.)
-        std::env::set_var("http_proxy",  proxy);
-        std::env::set_var("https_proxy", proxy);
-        std::env::set_var("HTTP_PROXY",  proxy);
-        std::env::set_var("HTTPS_PROXY", proxy);
-        std::env::set_var("no_proxy",    "localhost,127.0.0.1");
-        eprintln!("[Catisen] Tor proxy configured: {} (WebKitGTK env-var method)", proxy);
+    // §9.13: env::set_var is racy after threads exist. We do it once here at startup,
+    // before any WebView or background threads, and only on non-Windows where WebKitGTK
+    // respects env vars. On Windows, with_proxy_config is the real routing (see below).
+    // §9.10 comment is now fixed: wry 0.38 has with_proxy_config with SOCKS5 support.
+    let tor_proxy_for_probe: Option<String> = active_tor_proxy.clone();
 
-        // Spawn a background thread to probe the Tor exit node and log the IP.
-        // maybe_probe_tor_route() is rate-limited (max once per 2 minutes) and uses
-        // fetch_text_with_curl() to hit check.torproject.org/api/ip — it's safe to
-        // call without worrying about flooding.
+    #[cfg(not(target_os = "windows"))]
+    if let Some(ref proxy) = active_tor_proxy {
+        // WebKitGTK path — must be before WebViewBuilder
+        std::env::set_var("http_proxy", proxy);
+        std::env::set_var("https_proxy", proxy);
+        std::env::set_var("HTTP_PROXY", proxy);
+        std::env::set_var("HTTPS_PROXY", proxy);
+        std::env::set_var("no_proxy", "localhost,127.0.0.1");
+        eprintln!("[Catisen] Tor proxy env configured (Linux/WebKitGTK): {}", proxy);
+    }
+    #[cfg(target_os = "windows")]
+    if let Some(ref proxy) = active_tor_proxy {
+        eprintln!("[Catisen] Tor proxy (Windows): will use with_proxy_config, not env vars: {}", proxy);
+    }
+
+    if let Some(ref proxy) = tor_proxy_for_probe {
         let proxy_for_thread = proxy.clone();
         std::thread::spawn(move || {
             maybe_probe_tor_route(&proxy_for_thread);
@@ -159,14 +167,12 @@ pub fn run(config: CatisenConfig) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // ── 9. Privacy / stealth initialisation script ────────────────────────────
-    // build_stealth_script (privacy/stealth.rs) returns an Option<String> that only
-    // applies geolocation spoofing + canvas/WebGL noise.  privacy_init_js in chrome.rs
-    // is the more comprehensive version used here (includes navigator overrides, fetch/XHR
-    // wrapping, and the toolbar chrome in one injected script).
-    let ua      = pick_user_agent(BrowserProfile::AutoDesktop);
-    let priv_js = privacy_init_js(ua, "Win32", "en-US", "America/New_York");
+    // §9.9: use pick_profile() for consistent UA/platform/lang/tz tuple, and pass UA via with_user_agent
+    // so real HTTP UA matches JS spoof.
+    let (ua, platform, language, timezone) = pick_profile();
+    let priv_js = privacy_init_js(ua, platform, language, timezone);
     let init_js = format!("{}\n{}\n{}", priv_js, TOOLBAR_JS, YT_ADBLOCK_JS);
-    eprintln!("[Catisen] Stealth + toolbar script: {} bytes | UA: {}", init_js.len(), ua);
+    eprintln!("[Catisen] Stealth + toolbar script: {} bytes | UA: {} | platform: {} | lang: {} | tz: {}", init_js.len(), ua, platform, language, timezone);
 
     // ── 10. Event loop with typed user events ─────────────────────────────────
     let event_loop = EventLoopBuilder::<AppEvent>::with_user_event().build();
@@ -273,11 +279,69 @@ window.setLoading = function() {
     };
 
     // ── 12. WebView ───────────────────────────────────────────────────────────
-    let webview = WebViewBuilder::new(&window)
-        .with_url(&home)
+    // §9.9: with_user_agent so HTTP UA matches JS spoof
+    // §9.10: with_proxy_config for real Tor routing (Windows + Linux)
+    fn parse_proxy_endpoint(proxy_url: &str) -> Option<ProxyEndpoint> {
+        // Try url::Url parse (handles socks5h:// etc)
+        if let Ok(u) = url::Url::parse(proxy_url) {
+            if let Some(host) = u.host_str() {
+                let port = u.port().unwrap_or(9150);
+                return Some(ProxyEndpoint { host: host.to_string(), port });
+            }
+        }
+        // Fallback: strip scheme and parse host:port
+        let trimmed = proxy_url
+            .trim_start_matches("socks5h://")
+            .trim_start_matches("socks5://")
+            .trim_start_matches("socks4a://")
+            .trim_start_matches("http://")
+            .trim_start_matches("https://");
+        let host_port = trimmed.split('/').next().unwrap_or(trimmed);
+        let host_port = host_port.split('@').last().unwrap_or(host_port);
+        if host_port.is_empty() {
+            return None;
+        }
+        let mut parts = host_port.rsplitn(2, ':');
+        let port_str = parts.next()?;
+        let host_part = parts.next();
+        if let Some(h) = host_part {
+            if let Ok(p) = port_str.parse::<u16>() {
+                if !h.is_empty() {
+                    return Some(ProxyEndpoint { host: h.to_string(), port: p });
+                }
+            }
+        } else {
+            // No colon, just host
+            if !port_str.is_empty() && !port_str.contains('.') && port_str.parse::<u16>().is_ok() {
+                // Actually single part is port? treat as 127.0.0.1:port
+                if let Ok(p) = port_str.parse::<u16>() {
+                    return Some(ProxyEndpoint { host: "127.0.0.1".to_string(), port: p });
+                }
+            } else if !host_port.is_empty() {
+                return Some(ProxyEndpoint { host: host_port.to_string(), port: 9150 });
+            }
+        }
+        None
+    }
 
-        // Privacy BOM overrides + toolbar chrome — runs at document-start on every page.
-        .with_initialization_script(&init_js)
+    let mut webview_builder = WebViewBuilder::new(&window)
+        .with_url(&home)
+        .with_user_agent(&ua)
+        .with_initialization_script(&init_js);
+
+    // §9.10: if Tor enabled, route WebView through SOCKS5 proxy via wry's with_proxy_config
+    // This is the actual fix for Windows (env vars ignored by WebView2)
+    if let Some(ref proxy_url) = active_tor_proxy {
+        if let Some(endpoint) = parse_proxy_endpoint(proxy_url) {
+            eprintln!("[Tor] WebView with_proxy_config SOCKS5 {}:{}", endpoint.host, endpoint.port);
+            webview_builder = webview_builder.with_proxy_config(ProxyConfig::Socks5(endpoint));
+        } else {
+            eprintln!("[Tor] Warning: could not parse proxy endpoint from {}", proxy_url);
+        }
+    }
+
+    let webview = webview_builder
+
 
         // Native ad/tracker blocking at the navigation level.
         // Also enforces geolocation permission denial for HTTP sites via PermissionManager.

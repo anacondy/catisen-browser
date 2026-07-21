@@ -184,8 +184,9 @@ pub fn maybe_probe_tor_route(proxy: &str) {
         .map(|v| if v { "yes" } else { "no" }.to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
+    // §9.12 fix: pass proxy to avoid clearnet leak (previously None leaked country lookup over clearnet)
     let exit_country = if exit_ip != "unknown" {
-        fetch_text_with_curl(&format!("https://ipapi.co/{}/country_name/", exit_ip), None, 8)
+        fetch_text_with_curl(&format!("https://ipapi.co/{}/country_name/", exit_ip), Some(&proxy_addr), 8)
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| "unknown".to_string())
@@ -193,7 +194,7 @@ pub fn maybe_probe_tor_route(proxy: &str) {
         "unknown".to_string()
     };
 
-    let bridge_hint = std::env::var("CATISEN_TOR_BRIDGE_HINT")
+    let _bridge_hint = std::env::var("CATISEN_TOR_BRIDGE_HINT")
         .unwrap_or_else(|_| "unknown (SOCKS only; ControlPort required for exact bridge)".to_string());
 
     eprintln!(

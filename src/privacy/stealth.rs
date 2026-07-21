@@ -104,30 +104,30 @@ impl BrowserProfile {
     fn user_agents(&self) -> &'static [&'static str] {
         match self {
             BrowserProfile::AutoDesktop => &[
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
             ],
             BrowserProfile::Windows => &[
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
             ],
             BrowserProfile::MacOS => &[
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 13.6; rv:124.0) Gecko/20100101 Firefox/124.0",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.7; rv:131.0) Gecko/20100101 Firefox/131.0",
             ],
             BrowserProfile::Linux => &[
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (X11; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0",
             ],
             BrowserProfile::Android => &[
-                "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.105 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.144 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6261.105 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6167.144 Mobile Safari/537.36",
             ],
         }
     }
 
-    fn device_hints(&self) -> (&'static str, &'static str, &'static str) {
+    pub fn device_hints(&self) -> (&'static str, &'static str, &'static str) {
         match self {
             BrowserProfile::AutoDesktop | BrowserProfile::Windows => ("Win32", "en-US", "America/New_York"),
             BrowserProfile::MacOS => ("MacIntel", "en-US", "Europe/Zurich"),
@@ -154,6 +154,34 @@ pub fn pick_user_agent(profile: BrowserProfile) -> &'static str {
         .unwrap_or("Mozilla/5.0")
 }
 
+/// §9.9: pick a consistent profile tuple so UA OS-token matches platform/lang/tz
+/// Returns (ua, platform, language, timezone)
+pub fn pick_profile() -> (&'static str, &'static str, &'static str, &'static str) {
+    // Consistent tuples covering Windows, Linux, macOS
+    const PROFILES: &[(&str, &str, &str, &str)] = &[
+        (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+            "Win32",
+            "en-US",
+            "America/New_York",
+        ),
+        (
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+            "Linux x86_64",
+            "en-GB",
+            "Europe/Amsterdam",
+        ),
+        (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+            "MacIntel",
+            "en-US",
+            "America/Los_Angeles",
+        ),
+    ];
+    let mut rng = rand::thread_rng();
+    *PROFILES.choose(&mut rng).unwrap()
+}
+
 pub fn build_stealth_script(geo_location: GeoLocation, fp: FingerprintOptions) -> Option<String> {
     if !fp.hardening_enabled && geo_location == GeoLocation::Disabled {
         return None;
@@ -169,13 +197,15 @@ pub fn build_stealth_script(geo_location: GeoLocation, fp: FingerprintOptions) -
 
     let canvas_webgl_block = if fp.spoof_canvas_webgl {
         r#"
+            // §9.9 per-session seed: generate once, reuse per toDataURL (not random per call)
+            const _catCanvasSeed = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
             const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
             HTMLCanvasElement.prototype.toDataURL = function(...args) {
               const ctx = this.getContext('2d');
               if (ctx) {
                 ctx.save();
                 ctx.globalAlpha = 0.01;
-                ctx.fillStyle = '#010101';
+                ctx.fillStyle = _catCanvasSeed;
                 ctx.fillRect(0, 0, 1, 1);
                 ctx.restore();
               }
@@ -241,4 +271,37 @@ pub fn parse_spoof_canvas_env(default: bool) -> bool {
 
 pub fn parse_spoof_webdriver_env(default: bool) -> bool {
     parse_bool_env("CATISEN_SPOOF_WEBDRIVER", default)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pick_profile_consistency() {
+        // UA OS-token should match platform hint
+        for _ in 0..20 {
+            let (ua, platform, _lang, _tz) = pick_profile();
+            if platform == "Win32" {
+                assert!(ua.contains("Windows"), "Win32 platform but UA not Windows: {}", ua);
+            } else if platform == "Linux x86_64" {
+                assert!(ua.contains("Linux") || ua.contains("X11"), "Linux platform but UA not Linux: {}", ua);
+            } else if platform == "MacIntel" {
+                assert!(ua.contains("Macintosh") || ua.contains("Mac"), "MacIntel platform but UA not Mac: {}", ua);
+            }
+            // Platform should not be hardcoded to Win32 for Linux/macOS UAs (old bug)
+            // Ensure tuple is consistent
+            assert!(!platform.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_device_hints_match() {
+        let (plat_win, _lang_win, _tz_win) = BrowserProfile::Windows.device_hints();
+        assert_eq!(plat_win, "Win32");
+        let (plat_linux, _lang_linux, _tz_linux) = BrowserProfile::Linux.device_hints();
+        assert_eq!(plat_linux, "Linux x86_64");
+        let (plat_mac, _lang_mac, _tz_mac) = BrowserProfile::MacOS.device_hints();
+        assert_eq!(plat_mac, "MacIntel");
+    }
 }
