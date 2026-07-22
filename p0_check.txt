@@ -1,0 +1,371 @@
+    Checking catisen v0.2.0 (C:\Users\iassh\catisen-browser)
+warning: unused variable: `bridge_hint`
+   --> src\privacy\tor_manager.rs:196:9
+    |
+196 |     let bridge_hint = std::env::var("CATISEN_TOR_BRIDGE_HINT")
+    |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_bridge_hint`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated items `defaults` and `from_runtime_flags` are never used
+  --> src\config.rs:15:12
+   |
+14 | impl FingerprintLevel {
+   | --------------------- associated items in this implementation
+15 |     pub fn defaults(self) -> (bool, bool, bool) {
+   |            ^^^^^^^^
+...
+23 |     pub fn from_runtime_flags(
+   |            ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated items `unwrap_or_default`, `load`, and `save` are never used
+   --> src\config.rs:77:12
+    |
+ 76 | impl CatisenConfig {
+    | ------------------ associated items in this implementation
+ 77 |     pub fn unwrap_or_default(self) -> Self {
+    |            ^^^^^^^^^^^^^^^^^
+...
+ 85 |     pub fn load() -> Result<Self, ConfigError> {
+    |            ^^^^
+...
+103 |     pub fn save(&self) -> Result<(), ConfigError> {
+    |            ^^^^
+
+warning: associated items `file_path` and `add_bookmark` are never used
+   --> src\history.rs:71:8
+    |
+ 31 | impl HistoryEngine {
+    | ------------------ associated items in this implementation
+...
+ 71 |     fn file_path() -> PathBuf {
+    |        ^^^^^^^^^
+...
+134 |     pub fn add_bookmark(&mut self, url: &str, title: &str) {
+    |            ^^^^^^^^^^^^
+
+warning: multiple fields are never read
+  --> src\libcurl_download_manager.rs:25:9
+   |
+24 | pub struct Download {
+   |            -------- fields in this struct
+25 |     pub id: usize,
+   |         ^^
+26 |     pub url: String,
+   |         ^^^
+27 |     pub path: String,
+   |         ^^^^
+...
+31 |     pub tor_proxy: Option<String>,
+   |         ^^^^^^^^^
+32 |     pub progress_percent: Arc<Mutex<f32>>,
+   |         ^^^^^^^^^^^^^^^^
+33 |     pub total_bytes: Arc<Mutex<f64>>,
+   |         ^^^^^^^^^^^
+34 |     pub downloaded_bytes: Arc<Mutex<f64>>,
+   |         ^^^^^^^^^^^^^^^^
+35 |     pub is_paused: Arc<Mutex<bool>>,
+   |         ^^^^^^^^^
+36 |     pub is_completed: Arc<Mutex<bool>>,
+   |         ^^^^^^^^^^^^
+   |
+   = note: `Download` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: methods `pause_download`, `resume_download`, and `get_progress` are never used
+   --> src\libcurl_download_manager.rs:173:12
+    |
+ 39 | impl DownloadManager {
+    | -------------------- methods in this implementation
+...
+173 |     pub fn pause_download(&mut self, id: usize) {
+    |            ^^^^^^^^^^^^^^
+...
+183 |     pub fn resume_download(&mut self, id: usize) {
+    |            ^^^^^^^^^^^^^^^
+...
+198 |     pub fn get_progress(&self, id: usize) -> Option<f32> {
+    |            ^^^^^^^^^^^^
+
+warning: variants `TorProxyUnavailable`, `InvalidTorProxy`, `ClientInit`, `Timeout`, `Request`, and `Stream` are never constructed
+  --> src\network\error.rs:6:5
+   |
+ 4 | pub enum FetchError {
+   |          ---------- variants in this enum
+ 5 |     #[error("Tor proxy is not reachable at {proxy} ({route_source}).")]
+ 6 |     TorProxyUnavailable {
+   |     ^^^^^^^^^^^^^^^^^^^
+...
+12 |     InvalidTorProxy(String),
+   |     ^^^^^^^^^^^^^^^
+...
+15 |     ClientInit(String),
+   |     ^^^^^^^^^^
+...
+18 |     Timeout {
+   |     ^^^^^^^
+...
+26 |     Request {
+   |     ^^^^^^^
+...
+36 |     Stream {
+   |     ^^^^^^
+   |
+   = note: `FetchError` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: methods `is_retryable` and `user_message` are never used
+  --> src\network\error.rs:47:12
+   |
+46 | impl FetchError {
+   | --------------- methods in this implementation
+47 |     pub fn is_retryable(&self) -> bool {
+   |            ^^^^^^^^^^^^
+...
+57 |     pub fn user_message(&self) -> String {
+   |            ^^^^^^^^^^^^
+
+warning: constant `PARA_MARK` is never used
+ --> src\network\text_extract.rs:3:7
+  |
+3 | const PARA_MARK: &str = "\u{001E}";
+  |       ^^^^^^^^^
+
+warning: function `is_ignored_tag` is never used
+ --> src\network\text_extract.rs:5:4
+  |
+5 | fn is_ignored_tag(name: &str) -> bool {
+  |    ^^^^^^^^^^^^^^
+
+warning: function `is_paragraph_tag` is never used
+ --> src\network\text_extract.rs:9:4
+  |
+9 | fn is_paragraph_tag(name: &str) -> bool {
+  |    ^^^^^^^^^^^^^^^^
+
+warning: function `is_heading_tag` is never used
+  --> src\network\text_extract.rs:13:4
+   |
+13 | fn is_heading_tag(name: &str) -> bool {
+   |    ^^^^^^^^^^^^^^
+
+warning: function `push_para_mark` is never used
+  --> src\network\text_extract.rs:17:4
+   |
+17 | fn push_para_mark(out: &mut String) {
+   |    ^^^^^^^^^^^^^^
+
+warning: function `walk_element` is never used
+  --> src\network\text_extract.rs:23:4
+   |
+23 | fn walk_element(element: ElementRef<'_>, out: &mut String) {
+   |    ^^^^^^^^^^^^
+
+warning: function `extract_clean_text` is never used
+  --> src\network\text_extract.rs:85:8
+   |
+85 | pub fn extract_clean_text(html: &str) -> String {
+   |        ^^^^^^^^^^^^^^^^^^
+
+warning: enum `GeoLocation` is never used
+ --> src\privacy\stealth.rs:4:10
+  |
+4 | pub enum GeoLocation {
+  |          ^^^^^^^^^^^
+
+warning: associated items `from_config_value`, `as_config_value`, `x_forwarded_for_value`, and `to_js_coords` are never used
+  --> src\privacy\stealth.rs:17:12
+   |
+16 | impl GeoLocation {
+   | ---------------- associated items in this implementation
+17 |     pub fn from_config_value(value: &str) -> Self {
+   |            ^^^^^^^^^^^^^^^^^
+...
+31 |     pub fn as_config_value(&self) -> &'static str {
+   |            ^^^^^^^^^^^^^^^
+...
+45 |     pub fn x_forwarded_for_value(&self) -> Option<&'static str> {
+   |            ^^^^^^^^^^^^^^^^^^^^^
+...
+59 |     pub fn to_js_coords(&self) -> (&'static str, &'static str) {
+   |            ^^^^^^^^^^^^
+
+warning: variants `Windows`, `MacOS`, `Linux`, and `Android` are never constructed
+  --> src\privacy\stealth.rs:77:5
+   |
+75 | pub enum BrowserProfile {
+   |          -------------- variants in this enum
+76 |     AutoDesktop,
+77 |     Windows,
+   |     ^^^^^^^
+78 |     MacOS,
+   |     ^^^^^
+79 |     Linux,
+   |     ^^^^^
+80 |     Android,
+   |     ^^^^^^^
+   |
+   = note: `BrowserProfile` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: associated items `from_config_value`, `as_config_value`, and `device_hints` are never used
+   --> src\privacy\stealth.rs:84:12
+    |
+ 83 | impl BrowserProfile {
+    | ------------------- associated items in this implementation
+ 84 |     pub fn from_config_value(value: &str) -> Self {
+    |            ^^^^^^^^^^^^^^^^^
+...
+ 94 |     pub fn as_config_value(&self) -> &'static str {
+    |            ^^^^^^^^^^^^^^^
+...
+130 |     fn device_hints(&self) -> (&'static str, &'static str, &'static str) {
+    |        ^^^^^^^^^^^^
+
+warning: struct `FingerprintOptions` is never constructed
+   --> src\privacy\stealth.rs:141:12
+    |
+141 | pub struct FingerprintOptions {
+    |            ^^^^^^^^^^^^^^^^^^
+
+warning: function `build_stealth_script` is never used
+   --> src\privacy\stealth.rs:157:8
+    |
+157 | pub fn build_stealth_script(geo_location: GeoLocation, fp: FingerprintOptions) -> Option<String> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `parse_bool_env` is never used
+   --> src\privacy\stealth.rs:209:4
+    |
+209 | fn parse_bool_env(var_name: &str, default: bool) -> bool {
+    |    ^^^^^^^^^^^^^^
+
+warning: function `parse_geo_env` is never used
+   --> src\privacy\stealth.rs:220:8
+    |
+220 | pub fn parse_geo_env() -> GeoLocation {
+    |        ^^^^^^^^^^^^^
+
+warning: function `parse_profile_env` is never used
+   --> src\privacy\stealth.rs:227:8
+    |
+227 | pub fn parse_profile_env() -> BrowserProfile {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `parse_fp_hardening_env` is never used
+   --> src\privacy\stealth.rs:234:8
+    |
+234 | pub fn parse_fp_hardening_env(default: bool) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `parse_spoof_canvas_env` is never used
+   --> src\privacy\stealth.rs:238:8
+    |
+238 | pub fn parse_spoof_canvas_env(default: bool) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `parse_spoof_webdriver_env` is never used
+   --> src\privacy\stealth.rs:242:8
+    |
+242 | pub fn parse_spoof_webdriver_env(default: bool) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `resolve_or_launch_tor_proxy` is never used
+   --> src\privacy\tor_manager.rs:100:8
+    |
+100 | pub fn resolve_or_launch_tor_proxy() -> (String, String) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `resolve_tor_proxy` is never used
+   --> src\privacy\tor_manager.rs:105:8
+    |
+105 | pub fn resolve_tor_proxy() -> String {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: associated function `pair_device` is never used
+  --> src\sync_chain.rs:64:12
+   |
+14 | impl SyncChain {
+   | -------------- associated function in this implementation
+...
+64 |     pub fn pair_device(_phrase: &str) -> Result<(), String> {
+   |            ^^^^^^^^^^^
+
+warning: method `close_tab` is never used
+  --> src\tab_isolation.rs:65:12
+   |
+22 | impl TabManager {
+   | --------------- method in this implementation
+...
+65 |     pub fn close_tab(&mut self, tab_id: usize) {
+   |            ^^^^^^^^^
+
+warning: variants `TechManual` and `TerminalBlue` are never constructed
+ --> src\text_mode.rs:8:5
+  |
+6 | pub enum ReaderTheme {
+  |          ----------- variants in this enum
+7 |     MentalityDark,
+8 |     TechManual,   // Based on Image 1 (White/Navy, clean sans-serif)
+  |     ^^^^^^^^^^
+9 |     TerminalBlue, // Based on Image 2 (Deep blue, white monospace, red accents)
+  |     ^^^^^^^^^^^^
+  |
+  = note: `ReaderTheme` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: associated items `set_theme`, `clean_html`, and `remove_html_tag` are never used
+  --> src\text_mode.rs:31:12
+   |
+17 | impl ReaderMode {
+   | --------------- associated items in this implementation
+...
+31 |     pub fn set_theme(&mut self, theme: ReaderTheme) {
+   |            ^^^^^^^^^
+...
+36 |     pub fn clean_html(&self, raw_html: &str) -> String {
+   |            ^^^^^^^^^^
+...
+76 |     fn remove_html_tag(html: &str, start_tag: &str, end_tag: &str) -> String {
+   |        ^^^^^^^^^^^^^^^
+
+warning: method `load_filter_list` is never used
+  --> src\ublock_integration.rs:83:12
+   |
+43 | impl AdBlocker {
+   | -------------- method in this implementation
+...
+83 |     pub fn load_filter_list(&mut self, file_path: &str) -> std::io::Result<()> {
+   |            ^^^^^^^^^^^^^^^^
+
+warning: fields `id`, `progress_percent`, `total_bytes`, `downloaded_bytes`, and `is_completed` are never read
+  --> src\libcurl_download_manager.rs:25:9
+   |
+24 | pub struct Download {
+   |            -------- fields in this struct
+25 |     pub id: usize,
+   |         ^^
+...
+32 |     pub progress_percent: Arc<Mutex<f32>>,
+   |         ^^^^^^^^^^^^^^^^
+33 |     pub total_bytes: Arc<Mutex<f64>>,
+   |         ^^^^^^^^^^^
+34 |     pub downloaded_bytes: Arc<Mutex<f64>>,
+   |         ^^^^^^^^^^^^^^^^
+35 |     pub is_paused: Arc<Mutex<bool>>,
+36 |     pub is_completed: Arc<Mutex<bool>>,
+   |         ^^^^^^^^^^^^
+   |
+   = note: `Download` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: method `get_progress` is never used
+   --> src\libcurl_download_manager.rs:198:12
+    |
+ 39 | impl DownloadManager {
+    | -------------------- method in this implementation
+...
+198 |     pub fn get_progress(&self, id: usize) -> Option<f32> {
+    |            ^^^^^^^^^^^^
+
+warning: `catisen` (bin "catisen") generated 34 warnings (run `cargo fix --bin "catisen" -p catisen` to apply 1 suggestion)
+warning: `catisen` (bin "catisen" test) generated 32 warnings (30 duplicates)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.58s
+check=0
