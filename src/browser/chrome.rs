@@ -447,7 +447,7 @@ html.__cat_native_fullscreen body { margin-top: 0 !important; }
      *
      *   Alt+Left / Alt+Right → Back / Forward
      *   F5                   → Reload
-     *   F11 / player F       → Toggle native fullscreen
+     *   F11                  → Toggle native fullscreen
      *   Ctrl+L               → Focus URL bar
      *   Ctrl+T               → New Tab        (NEW)
      *   Ctrl+Tab             → Next Tab       (NEW — sends newtab for now; full
@@ -467,16 +467,6 @@ html.__cat_native_fullscreen body { margin-top: 0 !important; }
                 e.preventDefault();
                 ipc({ t: 'fullscreen' });
             }
-        }
-
-        // YouTube and many HTML5 players use F for fullscreen. Only intercept
-        // it when a video is present and the focus is not an editable control.
-        var tag = e.target && e.target.tagName;
-        var editable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
-            || (e.target && e.target.isContentEditable);
-        if (!editable && (e.key === 'f' || e.key === 'F') && document.querySelector('video')) {
-            e.preventDefault();
-            ipc({ t: 'fullscreen' });
         }
 
         if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
@@ -662,7 +652,29 @@ pub const YT_ADBLOCK_JS: &str = r#"
             if (skip) skip.click();
         } catch (_) {}
     }
+
+    // Keep the player box proportional to the actual media stream. YouTube
+    // can switch between 16:9, 4:3, and portrait clips; forcing every video
+    // into one fixed box is what creates the large empty side bars.
+    function fitYouTubeVideoFrame() {
+        var video = document.querySelector('video');
+        var player = video && (video.closest('.html5-video-player') || document.getElementById('movie_player'));
+        if (!video || !player || !video.videoWidth || !video.videoHeight) return;
+        player.style.setProperty('aspect-ratio', video.videoWidth + ' / ' + video.videoHeight, 'important');
+        player.style.setProperty('height', 'auto', 'important');
+    }
+    function watchYouTubeVideo() {
+        var video = document.querySelector('video');
+        if (video && !video.__catisenAspectHooked) {
+            video.__catisenAspectHooked = true;
+            video.addEventListener('loadedmetadata', fitYouTubeVideoFrame);
+            video.addEventListener('resize', fitYouTubeVideoFrame);
+        }
+        fitYouTubeVideoFrame();
+    }
     hideYouTubeAds();
+    watchYouTubeVideo();
+    setInterval(watchYouTubeVideo, 1000);
     if (document.documentElement) {
         new MutationObserver(hideYouTubeAds).observe(document.documentElement, {
             childList: true, subtree: true

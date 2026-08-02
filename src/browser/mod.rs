@@ -885,7 +885,7 @@ fn resolve_tor_for_session(config: &CatisenConfig) -> Option<String> {
 /// This bridges the Rust-side theme choice to the live WebView DOM/CSS path.
 fn reader_mode_enable_js(reader: &ReaderMode) -> String {
     let (bg, fg, font, link) = match reader.current_theme {
-        ReaderTheme::MentalityDark => ("#121212", "#E0E0E0", "Fira Code, sans-serif", "#8ab4f8"),
+        ReaderTheme::MentalityDark => ("#121212", "#E0E0E0", "Fira Code, sans-serif", "#f04747"),
         ReaderTheme::TechManual => ("#F8F9FA", "#333333", "Helvetica Neue, Arial, sans-serif", "#0055A4"),
         ReaderTheme::TerminalBlue => ("#0000B3", "#FFFFFF", "Courier New, monospace", "#FFCC00"),
     };
