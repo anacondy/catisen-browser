@@ -6,7 +6,7 @@
 //!
 //! | Module                           | What was dead             | Now wired here                          |
 //! |----------------------------------|---------------------------|-----------------------------------------|
-//! | `privacy/tor_manager.rs`         | All functions             | `resolve_tor_for_session()` calls `detect_tor_proxy_status()`; `maybe_probe_tor_route()` runs on a background thread |
+//! | `privacy/tor_manager.rs`         | All functions             | `resolve_tor_for_session()` calls the configured-proxy detector; `maybe_probe_tor_route()` runs on a background thread |
 //! | `libcurl_download_manager.rs`    | `tor_proxy` field missing | `start_download()` now receives `active_tor_proxy` so downloads route through Tor |
 //! | `permissions.rs`                 | `PermissionManager` never constructed | Initialised here; `set_permission()` called on HTTP sites in `UpdateUrlBar`; `SetPermission` IPC updates it |
 //! | `text_mode.rs`                   | `ReaderMode` never constructed | Initialised here; `ToggleReaderMode` IPC calls `toggle()` and injects reader CSS |
@@ -59,7 +59,7 @@ use crate::permissions::{
 use crate::privacy::stealth::pick_profile;
 use wry::{ProxyConfig, ProxyEndpoint};
 // Previously dead: detect_tor_proxy_status and maybe_probe_tor_route were never called.
-// Now: detect_tor_proxy_status() replaces the plain config.tor_proxy_url read at startup
+// Now: the configured-proxy detector validates config.toml plus environment overrides
 // so we get actual TCP reachability validation; maybe_probe_tor_route() runs on a
 // background thread to log the exit-node IP via the Tor check API.
 use crate::privacy::tor_manager::{
@@ -131,7 +131,7 @@ pub fn run(mut config: CatisenConfig) -> Result<(), Box<dyn std::error::Error>> 
     // Previously: the browser read config.tor_proxy_url directly and set env vars
     // without verifying the proxy was reachable.
     //
-    // Now: resolve_tor_for_session() calls detect_tor_proxy_status() from
+    // Now: resolve_tor_for_session() calls the configured-proxy detector from
     // privacy/tor_manager.rs to:
     //   • Perform a TCP reachability check before setting env vars
     //   • Pick up CATISEN_TOR_PROXY env var overrides
@@ -599,8 +599,8 @@ window.setLoading = function() {
                 }
 
                 // ── Reader Mode (text_mode.rs) ────────────────────────────────
-                // Previously dead: ReaderMode was implemented in text_mode.rs but
-                // toggle() and clean_html() were never called from anywhere.
+                // ReaderMode state is owned in text_mode.rs and the live DOM
+                // transformation is generated here.
                 //
                 // Now: ToggleReaderMode IPC (Ctrl+R / toolbar button) calls
                 // reader_mode.toggle() and either:
@@ -789,7 +789,7 @@ window.setLoading = function() {
 
 /// Determine the active Tor proxy URL for this browser session.
 ///
-/// Calls `privacy::tor_manager::detect_tor_proxy_status()` (previously dead)
+/// Calls the configured-proxy detector in `privacy::tor_manager`
 /// instead of reading `config.tor_proxy_url` directly, so we get:
 ///   • TCP reachability validation before committing to a proxy
 ///   • CATISEN_TOR_PROXY env var override support
@@ -824,9 +824,7 @@ fn resolve_tor_for_session(config: &CatisenConfig) -> Option<String> {
 /// The JS removes known noise elements (scripts, iframes, videos, sidebars) and
 /// applies the theme CSS from the Rust `ReaderMode` struct.
 ///
-/// Previously dead: `ReaderMode::clean_html()` and `ReaderMode::set_theme()` were
-/// implemented in text_mode.rs but never called.  This function bridges the gap:
-/// it reads the Rust-side theme choice and emits the equivalent in-page JS/CSS.
+/// This bridges the Rust-side theme choice to the live WebView DOM/CSS path.
 fn reader_mode_enable_js(reader: &ReaderMode) -> String {
     let (bg, fg, font, link) = match reader.current_theme {
         ReaderTheme::MentalityDark => ("#121212", "#E0E0E0", "Fira Code, sans-serif", "#f04747"),
