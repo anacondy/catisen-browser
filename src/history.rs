@@ -171,7 +171,9 @@ impl HistoryEngine {
         // interleaving. The sequence check prevents an older detached writer
         // from overwriting a newer snapshot that was queued later.
         let lock = WRITE_LOCK.get_or_init(|| Mutex::new(()));
-        let _guard = lock.lock().map_err(|_| "history writer lock poisoned")?;
+        let _guard = lock.lock().map_err(|_| {
+            std::io::Error::new(std::io::ErrorKind::Other, "history writer lock poisoned")
+        })?;
         if sequence + 1 < WRITE_SEQUENCE.load(Ordering::Acquire) {
             return Ok(());
         }

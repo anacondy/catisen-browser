@@ -3,7 +3,8 @@
 **Audit date:** 2026-08-01 (UTC)  
 **Audit type:** read-only code, security, privacy, architecture, and repository-state review  
 **Requested scope:** determine which findings from the supplied earlier-agent analysis belong to this repository and which do not  
-**No production code was changed.** This deliverable adds only this Markdown report.
+**Initial audit status:** read-only baseline review.  
+**Follow-up status:** after the user selected the latest remote browser source, the implementation was imported onto the fixed Arena branch and a remediation pass was applied. The current branch status is recorded in the addendum at the end of this report.
 
 ---
 
@@ -445,6 +446,57 @@ The source on the migration/development branches is a credible prototype and con
 
 ---
 
+## 11. Remediation pass — 2026-08-02
+
+The user selected `arena/019f819c-catisen-browser` at `3489fcf` as the source baseline. Its browser source was imported onto the fixed branch `arena/019fbfaf-catisen-browser`, and the following changes were applied in the current worktree:
+
+- [x] Replaced quote-only privacy-script interpolation with `serde_json` JavaScript-string serialization.
+- [x] Fixed blocked XHR handling so `open()` always calls the native method and `send()` suppresses only the blocked request.
+- [x] Corrected flyout/settings copy for experimental tab isolation and unimplemented sync pairing.
+- [x] Reworked permission keys to preserve scheme, host, and non-default port; added wildcard defaults and HTTP grant denial.
+- [x] Added document-start HTTP hardware-API denial as defense-in-depth and changed settings to send `location.origin`.
+- [x] Replaced the Linux/Windows sandbox no-op with Linux `PR_SET_NO_NEW_PRIVS` and Windows Job Object lifetime hardening. This remains explicitly short of a full renderer sandbox.
+- [x] Added persistent-history opt-out, onion filtering, bounded snapshots, Unix `0600` permissions, cross-platform replacement handling, and background visit writes.
+- [x] Added a settings IPC toggle for persistent visit history.
+- [x] Removed the dead `CatisenConfig::unwrap_or_default` method.
+- [x] Retained the stronger existing 256-bit sync identity and no-secret logging; pairing remains explicitly unimplemented.
+- [x] Made isolated-profile cleanup actually call `remove_dir_all`, including cleanup when isolation is disabled after a tab was created.
+- [x] Preserved the proxied Tor country lookup and made its curl helper explicitly use SOCKS5-hostname mode.
+- [x] Wired bounded retry/status/timeout-aware fetches into the headless path.
+- [x] Added typed adblock checks with request source/resource type and made a poisoned blocker fail closed for navigation.
+- [x] Added `--url`, `--tor`, `CATISEN_VIEW_MODE=TextOnly`, and `CATISEN_LOG_FILE` handling; fixed hostname-aware Tor probing and removed the headless clearnet fallback when Tor is required.
+- [x] Added `CATISEN_URL` handling and validated the configured home page.
+- [x] Removed the duplicate dead raw-HTML reader implementation and fixed generated reader-mode JavaScript for all three themes.
+- [x] Made download IDs stable, added size/symlink/error protections, and removed worker-thread setup `unwrap()` panics.
+- [x] Removed orphaned `gtk_ui.rs`, `media_extractor.rs`, `src/file.png`, and `test_font.rs` from the imported browser source.
+- [x] Added explicit `.onion` route checks so onion navigation/downloads require an active Tor route.
+- [x] Updated README, `.gitignore`, and Cargo license metadata to match the remediation state.
+
+### Verification performed
+
+- [x] `git diff --check` passes for the changed source/config/test paths.
+- [x] Node.js syntax checks pass for the toolbar, YouTube, debug, and settings scripts.
+- [x] Instantiated `privacy_init_js` passes syntax checking with hostile quote/backslash/newline input.
+- [x] Instantiated reader-mode scripts pass syntax checking for MentalityDark, TechManual, and TerminalBlue.
+- [x] Static source assertions confirm JSON serialization and the XHR `send()` guard are present.
+- [x] The fixed branch was pushed without force-pushing or merging any pull request.
+
+### Not yet verified / still open
+
+- [ ] Rust compilation and Cargo tests: `cargo`/`rustc` are unavailable in the current sandbox.
+- [ ] Windows WebView2 runtime build and Job Object behavior on an actual Windows host.
+- [ ] Linux WebKitGTK build and runtime behavior.
+- [ ] Native WebView permission callbacks for camera, microphone, and notifications.
+- [ ] A real trusted/native IPC boundary: page JavaScript and the injected toolbar still share one WebView context. This is a remaining architectural blocker, not marked fixed.
+- [ ] Full subresource interception with true initiator/resource-type data for EasyList.
+- [ ] True per-tab WebView storage isolation.
+- [ ] Symlink-safe atomic download commit across Windows and Unix under adversarial filesystem races.
+- [ ] CI workflow changes: GitHub rejected pushing workflow files because the configured GitHub App lacks `workflows` permission. No force push was attempted.
+
+Current remediation commit: `603f7f3` on `arena/019fbfaf-catisen-browser`.
+
+---
+
 ## Appendix A — Useful repository references
 
 - Default repository: <https://github.com/anacondy/catisen-browser>
@@ -454,4 +506,4 @@ The source on the migration/development branches is a credible prototype and con
 - Migration baseline tree: <https://github.com/anacondy/catisen-browser/tree/migration/browser-2e03418>
 - Latest inspected development tree: <https://github.com/anacondy/catisen-browser/tree/arena/019f819c-catisen-browser>
 
-**Working-tree state after report creation:** only the report file is newly added on `arena/019fbfaf-catisen-browser`; no production source, workflow, branch, or pull request was modified.
+**Current working-tree state:** the latest browser source and remediation changes are on `arena/019fbfaf-catisen-browser`; no other branch was pushed, no force push was used, and the existing pull requests were not merged or closed.
