@@ -480,6 +480,7 @@ The user selected `arena/019f819c-catisen-browser` at `3489fcf` as the source ba
 - [x] Instantiated reader-mode scripts pass syntax checking for MentalityDark, TechManual, and TerminalBlue.
 - [x] Static source assertions confirm JSON serialization and the XHR `send()` guard are present.
 - [x] Added `scripts/test-browser.sh`, which records Cargo/static checks, external smoke probes, a local fixture server, and a numbered manual WebView2 test matrix.
+- [x] Reviewed the first Windows test log: fixed the sandbox format-string error and all four `ProxyEndpoint.port` type errors found by Cargo.
 - [x] The fixed branch was pushed without force-pushing or merging any pull request.
 
 ### Not yet verified / still open
@@ -494,7 +495,7 @@ The user selected `arena/019f819c-catisen-browser` at `3489fcf` as the source ba
 - [ ] Symlink-safe atomic download commit across Windows and Unix under adversarial filesystem races.
 - [ ] CI workflow changes: GitHub rejected pushing workflow files because the configured GitHub App lacks `workflows` permission. No force push was attempted.
 
-Remediation commits: `603f7f3`, `a887e13`, and `9c67b4e` on `arena/019fbfaf-catisen-browser`.
+Remediation commits: `603f7f3`, `a887e13`, `9c67b4e`, and `183b611` on `arena/019fbfaf-catisen-browser`.
 
 ---
 
