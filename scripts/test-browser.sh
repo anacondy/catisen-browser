@@ -99,7 +99,7 @@ else
 fi
 
 section "Environment and repository checks"
-for command_name in git cargo rustc python3 python node curl; do
+for command_name in git cargo rustc node curl; do
     if command -v "$command_name" >/dev/null 2>&1; then
         printf '%-8s: ' "$command_name"
         "$command_name" --version 2>&1 | head -n 1 || true
@@ -107,6 +107,12 @@ for command_name in git cargo rustc python3 python node curl; do
         record NOTE "$command_name is not installed"
     fi
 done
+if [[ -n "$PYTHON_BIN" ]]; then
+    printf 'python  : %s
+' "$PYTHON_BIN"
+else
+    record NOTE "Neither python3 nor python is installed"
+fi
 
 if [[ -f Cargo.lock ]]; then
     record PASS "Cargo.lock exists"

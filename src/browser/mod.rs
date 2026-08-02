@@ -188,35 +188,16 @@ pub fn run(mut config: CatisenConfig) -> Result<(), Box<dyn std::error::Error>> 
     // ── 11. OS window ─────────────────────────────────────────────────────────
     let window = WindowBuilder::new()
         .with_title("Catisen — Privacy Browser")
-        .with_inner_size(LogicalSize::new(1280.0_f64, 800.0_f64))
-        .with_min_inner_size(LogicalSize::new(640.0_f64, 480.0_f64))
+        .with_inner_size(LogicalSize::new(1366.0_f64, 768.0_f64))
+        .with_min_inner_size(LogicalSize::new(800.0_f64, 450.0_f64))
         .build(&event_loop)?;
 
-    // ── 11b. Sync Chain native overlay window (XSS fix) ───────────────────────
+    // ── 11b. Sync Chain native overlay window (lazy, XSS-safe) ───────────────
     //
-    // SECURITY: The sync seed phrase is sensitive key material.  The previous
-    // implementation injected it into the main WebView DOM as an HTML element.
-    // This is an XSS/data-exfiltration vulnerability: any script on the currently
-    // loaded page could read it with `document.querySelector(...)` and POST it to
-    // an attacker's server.
-    //
-    // FIX: We now create a completely separate tao `Window` + wry `WebView` for
-    // the sync identity display.  The OS enforces the process/widget isolation —
-    // the main page's JavaScript context cannot access DOM objects that belong to
-    // a different window.  The seed data is passed into this isolated WebView via
-    // Rust's `evaluate_script()`, which calls the `window.showSync()` stub defined
-    // in the template HTML.
-    //
-    // The window starts hidden; it is shown and refreshed each time the user clicks
-    // "Generate Sync Identity" in the Settings panel.
-    let sync_window = WindowBuilder::new()
-        .with_title("🔗 Catisen Sync Chain — Keep This Secret")
-        .with_inner_size(LogicalSize::new(440.0_f64, 560.0_f64))
-        .with_min_inner_size(LogicalSize::new(380.0_f64, 480.0_f64))
-        .with_resizable(false)
-        .with_visible(false) // hidden until ShowSyncChain fires
-        .build(&event_loop)?;
-
+    // The sync seed is displayed in a separate native WebView so page JavaScript
+    // cannot read it. The window/WebView are created lazily on the first sync
+    // request; constructing a second WebView during startup made the main browser
+    // appear blank while WebView2 initialized two environments.
     // Template HTML for the sync overlay.  All visual content lives here; the
     // seed and QR are injected later via `window.showSync(b64, seed)` from Rust.
     let sync_html = r#"<!DOCTYPE html>
@@ -268,15 +249,7 @@ window.setLoading = function() {
 };
 </script></body></html>"#;
 
-    let sync_wv = WebViewBuilder::new(&sync_window)
-        .with_html(sync_html)
-        .build()?;
-
-    // Capture OS-level window IDs so the event loop can distinguish CloseRequested
-    // events for the main browser window vs the sync overlay.
     let main_window_id = window.id();
-    let sync_window_id = sync_window.id();
-
     let home = match std::env::var("CATISEN_URL") {
         Ok(url) if !url.trim().is_empty() => url,
         _ if !config.home_page.trim().is_empty() => config.home_page.clone(),
@@ -479,8 +452,12 @@ window.setLoading = function() {
 
     eprintln!("[Catisen] Browser window ready. Home: {}", home);
 
+    // The sync overlay is deliberately created only when requested.
+    let mut sync_window = None;
+    let mut sync_wv = None;
+
     // ── 13. Event loop ────────────────────────────────────────────────────────
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move |event, event_loop_target, control_flow| {
         *control_flow = ControlFlow::Wait;
 
         match event {
@@ -488,10 +465,12 @@ window.setLoading = function() {
             // CloseRequested is fired for EVERY tao window.  We check which window
             // it came from so the sync overlay can be hidden without quitting the app.
             Event::WindowEvent { window_id, event: WindowEvent::CloseRequested, .. } => {
-                if window_id == sync_window_id {
+                if sync_window.as_ref().map(|window| window.id()) == Some(window_id) {
                     // Sync overlay: just hide it — don't destroy the WebView.
                     // The next ShowSyncChain can reuse it without rebuilding.
-                    sync_window.set_visible(false);
+                    if let Some(window) = sync_window.as_ref() {
+                        window.set_visible(false);
+                    }
                 } else if window_id == main_window_id {
                     eprintln!("[Catisen] Window closed. Saving session history…");
                     if let Err(e) = history.save() {
@@ -637,13 +616,42 @@ window.setLoading = function() {
                 AppEvent::ShowSyncChain => {
                     eprintln!("[Catisen] ShowSyncChain: native overlay — generating identity…");
 
-                    // Show the overlay window immediately with a spinner, so the user
-                    // gets immediate visual feedback before the (potentially slow) QR
-                    // matrix generation completes.
-                    sync_window.set_visible(true);
-                    let _ = sync_wv.evaluate_script(
-                        "window.setLoading && window.setLoading()"
-                    );
+                    // Construct the second WebView only when the user asks for
+                    // sync. This keeps the first browser paint independent of
+                    // the hidden WebView2 environment used for the secret display.
+                    if sync_window.is_none() || sync_wv.is_none() {
+                        let window = match WindowBuilder::new()
+                            .with_title("🔗 Catisen Sync Chain — Keep This Secret")
+                            .with_inner_size(LogicalSize::new(440.0_f64, 560.0_f64))
+                            .with_min_inner_size(LogicalSize::new(380.0_f64, 480.0_f64))
+                            .with_resizable(false)
+                            .with_visible(false)
+                            .build(event_loop_target)
+                        {
+                            Ok(window) => window,
+                            Err(error) => {
+                                eprintln!("[Catisen] Could not create sync window: {error}");
+                                return;
+                            }
+                        };
+                        let view = match WebViewBuilder::new(&window)
+                            .with_html(sync_html)
+                            .build()
+                        {
+                            Ok(view) => view,
+                            Err(error) => {
+                                eprintln!("[Catisen] Could not create sync WebView: {error}");
+                                return;
+                            }
+                        };
+                        sync_window = Some(window);
+                        sync_wv = Some(view);
+                    }
+
+                    let Some(window) = sync_window.as_ref() else { return };
+                    let Some(sync_view) = sync_wv.as_ref() else { return };
+                    window.set_visible(true);
+                    let _ = sync_view.evaluate_script("window.setLoading && window.setLoading()");
 
                     let seed = sync_chain.generate_new_identity();
                     match sync_chain.generate_visual_qr_matrix() {
@@ -655,27 +663,22 @@ window.setLoading = function() {
                             match dyn_img.write_to(&mut cursor, ImageFormat::Png) {
                                 Ok(_) => {
                                     let png_bytes = cursor.into_inner();
-                                    let b64       = STANDARD.encode(&png_bytes);
+                                    let b64 = STANDARD.encode(&png_bytes);
                                     // Serialize both values as JavaScript string literals.
-                                    // The seed is currently hex, but keeping this boundary
-                                    // generic prevents a future format change from becoming
-                                    // an injection bug.
                                     let safe_b64 = serde_json::to_string(&b64)
                                         .unwrap_or_else(|_| "\"\"".to_string());
                                     let safe_seed = serde_json::to_string(&seed)
                                         .unwrap_or_else(|_| "\"\"".to_string());
-                                    // Populate the isolated overlay — seed data NEVER
-                                    // enters the main browsing WebView's DOM.
                                     let js = format!(
                                         "window.showSync && window.showSync({safe_b64}, {safe_seed})"
                                     );
-                                    let _ = sync_wv.evaluate_script(&js);
+                                    let _ = sync_view.evaluate_script(&js);
                                     eprintln!("[Catisen] Sync identity displayed in native overlay.");
                                 }
-                                Err(e) => eprintln!("[Catisen] Sync chain: PNG encode failed: {}", e),
+                                Err(error) => eprintln!("[Catisen] Sync chain: PNG encode failed: {error}"),
                             }
                         }
-                        Err(e) => eprintln!("[Catisen] Sync chain: QR generation failed: {}", e),
+                        Err(error) => eprintln!("[Catisen] Sync chain: QR generation failed: {error}"),
                     }
                 }
 

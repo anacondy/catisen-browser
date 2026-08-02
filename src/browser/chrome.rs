@@ -568,18 +568,19 @@ pub const TOOLBAR_JS: &str = r#"
     }
 
     /* ── Bootstrap ───────────────────────────────────────────────────────── */
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            mount();
-            startObserver();
-            startIframeObserver();
-            injectCosmeticFilters();
-        });
-    } else {
+    // Mount immediately when document-start already provides <html>. Waiting
+    // for DOMContentLoaded made the page appear blank and hid the browser
+    // toolbar while slow sites were still loading.
+    function bootstrap() {
         mount();
         startObserver();
         startIframeObserver();
         injectCosmeticFilters();
+    }
+    if (document.documentElement) {
+        bootstrap();
+    } else {
+        document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
     }
 })();
 "#;
