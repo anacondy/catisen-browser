@@ -65,6 +65,9 @@ pub const TOOLBAR_JS: &str = r#"
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
+html.__cat_native_fullscreen #__cat_bar { display: none !important; }
+html.__cat_native_fullscreen body { margin-top: 0 !important; }
+
 /* ── Toolbar buttons ────────────────────────────────────────── */
 #__cat_bar button {
     all: initial !important;
@@ -412,6 +415,12 @@ pub const TOOLBAR_JS: &str = r#"
         back:   function() { ipc({ t: 'back' }); },
         fwd:    function() { ipc({ t: 'fwd' }); },
         reload: function() { ipc({ t: 'reload' }); },
+        setFullscreen: function(enabled) {
+            document.documentElement.classList.toggle('__cat_native_fullscreen', !!enabled);
+            if (document.body) {
+                document.body.style.setProperty('margin-top', enabled ? '0' : H + 'px', 'important');
+            }
+        },
 
         // Called by Rust's UpdateUrlBar event after page-load to sync the address bar.
         // Also updates the dynamic padlock icon based on the URL scheme.
@@ -438,6 +447,7 @@ pub const TOOLBAR_JS: &str = r#"
      *
      *   Alt+Left / Alt+Right → Back / Forward
      *   F5                   → Reload
+     *   F11 / player F       → Toggle native fullscreen
      *   Ctrl+L               → Focus URL bar
      *   Ctrl+T               → New Tab        (NEW)
      *   Ctrl+Tab             → Next Tab       (NEW — sends newtab for now; full
@@ -450,6 +460,17 @@ pub const TOOLBAR_JS: &str = r#"
         if (e.altKey && e.key === 'ArrowLeft')  { e.preventDefault(); ipc({ t: 'back' }); }
         if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); ipc({ t: 'fwd' }); }
         if (e.key === 'F5')                     { e.preventDefault(); ipc({ t: 'reload' }); }
+        if (e.key === 'F11')                    { e.preventDefault(); ipc({ t: 'fullscreen' }); }
+
+        // YouTube and many HTML5 players use F for fullscreen. Only intercept
+        // it when a video is present and the focus is not an editable control.
+        var tag = e.target && e.target.tagName;
+        var editable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+            || (e.target && e.target.isContentEditable);
+        if (!editable && (e.key === 'f' || e.key === 'F') && document.querySelector('video')) {
+            e.preventDefault();
+            ipc({ t: 'fullscreen' });
+        }
 
         if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
             e.preventDefault();
@@ -614,6 +635,33 @@ pub const YT_ADBLOCK_JS: &str = r#"
         } catch (e) { console.warn('[Catisen] YT adblock strip failed', e); }
         return resp;
     }
+
+    // Cosmetic fallback for ad containers that YouTube inserts after the
+    // player response has already been processed. This cannot guarantee that
+    // every ad is blocked, but prevents common overlays/promoted cards from
+    // covering the page and keeps the limitation explicit.
+    var _ytAdSelectors = [
+        '.video-ads', '.ytp-ad-module', '.ytp-ad-player-overlay',
+        '.ytp-ad-overlay-container', '.ytp-ad-text', '.ytp-ad-skip-ad-slot',
+        'ytd-ad-slot-renderer', 'ytd-display-ad-renderer',
+        'ytd-promoted-sparkles-web-renderer', '#player-ads'
+    ].join(',');
+    function hideYouTubeAds() {
+        try {
+            document.querySelectorAll(_ytAdSelectors).forEach(function (node) {
+                node.style.setProperty('display', 'none', 'important');
+            });
+            var skip = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern');
+            if (skip) skip.click();
+        } catch (_) {}
+    }
+    hideYouTubeAds();
+    if (document.documentElement) {
+        new MutationObserver(hideYouTubeAds).observe(document.documentElement, {
+            childList: true, subtree: true
+        });
+    }
+    setInterval(hideYouTubeAds, 750);
 
     var _ytResp;
     try {

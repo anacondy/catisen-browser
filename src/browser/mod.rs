@@ -42,9 +42,9 @@ use tao::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoopBuilder},
-    window::WindowBuilder,
+    window::{Fullscreen, Icon, Window, WindowBuilder},
 };
-use wry::{http::Request, PageLoadEvent, WebViewBuilder};
+use wry::{http::Request, PageLoadEvent, WebView, WebViewBuilder};
 
 use crate::browser::chrome::{privacy_init_js, TOOLBAR_JS, YT_ADBLOCK_JS};
 use crate::browser::debug_panel::{open_settings_panel_js, toggle_debug_panel_js};
@@ -74,6 +74,45 @@ use crate::ublock_integration::get_adblocker;
 use crate::security_policy::{
     downloads_dir, ipc_origin_allowed, is_navigable, normalize_url, sanitize_download_path,
 };
+
+/// Generate a small embedded application icon for the native window/taskbar.
+/// Keeping it in code avoids depending on the placeholder image that was
+/// previously checked into the split source tree.
+fn catisen_window_icon() -> Option<Icon> {
+    const SIZE: usize = 32;
+    let mut rgba = vec![0_u8; SIZE * SIZE * 4];
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let dx = x.abs_diff(16) as i32;
+            let dy = y.abs_diff(16) as i32;
+            let rounded = dx <= 14 && dy <= 14 && (dx <= 12 || dy <= 12);
+            let mut color = if rounded {
+                [13, 17, 23, 255] // Catisen dark chrome background
+            } else {
+                [0, 0, 0, 0]
+            };
+
+            // Green shield body.
+            let shield_width = if y < 7 { 5 } else if y < 23 { 9 } else { 7 };
+            if (16 - shield_width..=16 + shield_width).contains(&(x as i32)) && (6..=27).contains(&y) {
+                color = [63, 185, 80, 255];
+            }
+            // Blue inset gives the icon a recognizable two-tone mark.
+            let inset_width = if y < 9 { 3 } else if y < 22 { 7 } else { 5 };
+            if (16 - inset_width..=16 + inset_width).contains(&(x as i32)) && (9..=24).contains(&y) {
+                color = [31, 111, 235, 255];
+            }
+            // Orange eyes/fox accent.
+            if (y == 14 || y == 15) && (x == 12 || x == 20) {
+                color = [227, 179, 65, 255];
+            }
+
+            let index = (y * SIZE + x) * 4;
+            rgba[index..index + 4].copy_from_slice(&color);
+        }
+    }
+    Icon::from_rgba(rgba, SIZE as u32, SIZE as u32).ok()
+}
 
 /// Entry point for the full GUI browser.
 ///
@@ -188,6 +227,7 @@ pub fn run(mut config: CatisenConfig) -> Result<(), Box<dyn std::error::Error>> 
     // ── 11. OS window ─────────────────────────────────────────────────────────
     let window = WindowBuilder::new()
         .with_title("Catisen — Privacy Browser")
+        .with_window_icon(catisen_window_icon())
         .with_inner_size(LogicalSize::new(1366.0_f64, 768.0_f64))
         .with_min_inner_size(LogicalSize::new(800.0_f64, 450.0_f64))
         .build(&event_loop)?;
@@ -426,6 +466,7 @@ window.setLoading = function() {
                         IpcMsg::Back                          => AppEvent::Back,
                         IpcMsg::Forward                       => AppEvent::Forward,
                         IpcMsg::Reload                        => AppEvent::Reload,
+                        IpcMsg::ToggleFullscreen              => AppEvent::ToggleFullscreen,
                         IpcMsg::NewTab                        => AppEvent::NewTab,
                         IpcMsg::OpenSettings                  => AppEvent::OpenSettings,
                         IpcMsg::ToggleDebugPanel              => AppEvent::ToggleDebugPanel,
@@ -453,8 +494,9 @@ window.setLoading = function() {
     eprintln!("[Catisen] Browser window ready. Home: {}", home);
 
     // The sync overlay is deliberately created only when requested.
-    let mut sync_window = None;
-    let mut sync_wv = None;
+    let mut sync_window: Option<Window> = None;
+    let mut sync_wv: Option<WebView> = None;
+    let mut is_fullscreen = false;
 
     // ── 13. Event loop ────────────────────────────────────────────────────────
     event_loop.run(move |event, event_loop_target, control_flow| {
@@ -506,6 +548,20 @@ window.setLoading = function() {
                 }
                 AppEvent::Reload => {
                     let _ = webview.evaluate_script("location.reload()");
+                }
+                AppEvent::ToggleFullscreen => {
+                    is_fullscreen = !is_fullscreen;
+                    let fullscreen = if is_fullscreen {
+                        Some(Fullscreen::Borderless(window.current_monitor()))
+                    } else {
+                        None
+                    };
+                    window.set_fullscreen(fullscreen);
+                    let state = if is_fullscreen { "true" } else { "false" };
+                    let _ = webview.evaluate_script(&format!(
+                        "if(window.__cat) window.__cat.setFullscreen({state});"
+                    ));
+                    eprintln!("[Catisen] Fullscreen → {}", if is_fullscreen { "ON" } else { "OFF" });
                 }
 
                 // ── New Tab ───────────────────────────────────────────────────

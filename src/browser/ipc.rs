@@ -19,6 +19,8 @@ pub enum IpcMsg {
     Forward,
     #[serde(rename = "reload")]
     Reload,
+    #[serde(rename = "fullscreen")]
+    ToggleFullscreen,
     #[serde(rename = "newtab")]
     NewTab,
 
@@ -70,6 +72,7 @@ pub enum AppEvent {
     Back,
     Forward,
     Reload,
+    ToggleFullscreen,
     NewTab,
 
     // ── URL-bar / title sync ──────────────────────────────────────────────────
