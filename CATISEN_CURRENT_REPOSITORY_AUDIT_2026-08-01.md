@@ -479,6 +479,7 @@ The user selected `arena/019f819c-catisen-browser` at `3489fcf` as the source ba
 - [x] Instantiated `privacy_init_js` passes syntax checking with hostile quote/backslash/newline input.
 - [x] Instantiated reader-mode scripts pass syntax checking for MentalityDark, TechManual, and TerminalBlue.
 - [x] Static source assertions confirm JSON serialization and the XHR `send()` guard are present.
+- [x] Added `scripts/test-browser.sh`, which records Cargo/static checks, external smoke probes, a local fixture server, and a numbered manual WebView2 test matrix.
 - [x] The fixed branch was pushed without force-pushing or merging any pull request.
 
 ### Not yet verified / still open
