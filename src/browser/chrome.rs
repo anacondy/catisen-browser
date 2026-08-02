@@ -460,7 +460,14 @@ html.__cat_native_fullscreen body { margin-top: 0 !important; }
         if (e.altKey && e.key === 'ArrowLeft')  { e.preventDefault(); ipc({ t: 'back' }); }
         if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); ipc({ t: 'fwd' }); }
         if (e.key === 'F5')                     { e.preventDefault(); ipc({ t: 'reload' }); }
-        if (e.key === 'F11')                    { e.preventDefault(); ipc({ t: 'fullscreen' }); }
+        if (e.key === 'F11' || e.key === 'Escape') {
+            // Escape only toggles when Catisen is currently borderless; in
+            // normal pages it retains the site's usual Escape behavior.
+            if (e.key === 'F11' || document.documentElement.classList.contains('__cat_native_fullscreen')) {
+                e.preventDefault();
+                ipc({ t: 'fullscreen' });
+            }
+        }
 
         // YouTube and many HTML5 players use F for fullscreen. Only intercept
         // it when a video is present and the focus is not an editable control.

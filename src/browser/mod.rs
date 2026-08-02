@@ -42,7 +42,7 @@ use tao::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoopBuilder},
-    window::{Fullscreen, Icon, Window, WindowBuilder},
+    window::{Icon, Window, WindowBuilder},
 };
 use wry::{http::Request, PageLoadEvent, WebView, WebViewBuilder};
 
@@ -551,12 +551,11 @@ window.setLoading = function() {
                 }
                 AppEvent::ToggleFullscreen => {
                     is_fullscreen = !is_fullscreen;
-                    let fullscreen = if is_fullscreen {
-                        Some(Fullscreen::Borderless(window.current_monitor()))
-                    } else {
-                        None
-                    };
-                    window.set_fullscreen(fullscreen);
+                    // Use borderless decorations rather than OS fullscreen. The
+                    // user asked F11/F to remove only the title bar; switching to
+                    // Fullscreen::Borderless changes monitor size/position and can
+                    // look like an unintended maximize operation.
+                    window.set_decorations(!is_fullscreen);
                     let state = if is_fullscreen { "true" } else { "false" };
                     let _ = webview.evaluate_script(&format!(
                         "if(window.__cat) window.__cat.setFullscreen({state});"
@@ -886,7 +885,7 @@ fn resolve_tor_for_session(config: &CatisenConfig) -> Option<String> {
 /// This bridges the Rust-side theme choice to the live WebView DOM/CSS path.
 fn reader_mode_enable_js(reader: &ReaderMode) -> String {
     let (bg, fg, font, link) = match reader.current_theme {
-        ReaderTheme::MentalityDark => ("#121212", "#E0E0E0", "Fira Code, sans-serif", "#f04747"),
+        ReaderTheme::MentalityDark => ("#121212", "#E0E0E0", "Fira Code, sans-serif", "#8ab4f8"),
         ReaderTheme::TechManual => ("#F8F9FA", "#333333", "Helvetica Neue, Arial, sans-serif", "#0055A4"),
         ReaderTheme::TerminalBlue => ("#0000B3", "#FFFFFF", "Courier New, monospace", "#FFCC00"),
     };
