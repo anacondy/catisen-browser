@@ -296,7 +296,7 @@ window.setLoading = function() {
                 return None;
             }
             if let Some(host) = u.host_str() {
-                let port = u.port().unwrap_or(9150);
+                let port = u.port().unwrap_or(9150).to_string();
                 return Some(ProxyEndpoint { host: host.to_string(), port });
             }
         }
@@ -323,7 +323,7 @@ window.setLoading = function() {
         if let Some(h) = host_part {
             if let Ok(p) = port_str.parse::<u16>() {
                 if !h.is_empty() {
-                    return Some(ProxyEndpoint { host: h.to_string(), port: p });
+                    return Some(ProxyEndpoint { host: h.to_string(), port: p.to_string() });
                 }
             }
         } else {
@@ -331,10 +331,10 @@ window.setLoading = function() {
             if !port_str.is_empty() && !port_str.contains('.') && port_str.parse::<u16>().is_ok() {
                 // Actually single part is port? treat as 127.0.0.1:port
                 if let Ok(p) = port_str.parse::<u16>() {
-                    return Some(ProxyEndpoint { host: "127.0.0.1".to_string(), port: p });
+                    return Some(ProxyEndpoint { host: "127.0.0.1".to_string(), port: p.to_string() });
                 }
             } else if !host_port.is_empty() {
-                return Some(ProxyEndpoint { host: host_port.to_string(), port: 9150 });
+                return Some(ProxyEndpoint { host: host_port.to_string(), port: "9150".to_string() });
             }
         }
         None

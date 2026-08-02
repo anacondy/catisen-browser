@@ -61,8 +61,7 @@ pub mod windows_sandbox {
         }
 
         eprintln!(
-            "[Catisen] Windows Job Object hardening engaged (kill-on-job-close); "
-            "this is not a full renderer sandbox."
+            "[Catisen] Windows Job Object hardening engaged (kill-on-job-close); this is not a full renderer sandbox."
         );
         Ok(())
     }

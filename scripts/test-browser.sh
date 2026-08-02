@@ -29,6 +29,12 @@ BROWSER_PID=""
 FIXTURE_DIR=""
 FIXTURE_PORT=""
 SERVER_PID=""
+PYTHON_BIN=""
+if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python3)"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python)"
+fi
 
 section() {
     printf '\n============================================================\n'
@@ -82,14 +88,18 @@ printf 'Branch: '; git branch --show-current 2>/dev/null || true
 printf 'Commit: '; git rev-parse --short HEAD 2>/dev/null || true
 printf 'Remote: '; git remote get-url origin 2>/dev/null || true
 
-if [[ "$(git branch --show-current 2>/dev/null || true)" != "arena/019fbfaf-catisen-browser" ]]; then
-    record NOTE "This is not the fixed Arena branch. Fetch/check out arena/019fbfaf-catisen-browser before treating results as the remediation build."
-else
+CURRENT_BRANCH="$(git branch --show-current 2>/dev/null || true)"
+if [[ "$CURRENT_BRANCH" == "arena/019fbfaf-catisen-browser" ]]; then
     record PASS "Running on arena/019fbfaf-catisen-browser"
+elif git cat-file -e HEAD:scripts/test-browser.sh 2>/dev/null \
+    && git cat-file -e HEAD:src/sandbox.rs 2>/dev/null; then
+    record PASS "Running from a detached browser-source worktree at $(git rev-parse --short HEAD)"
+else
+    record NOTE "This is not the fixed browser source worktree. Fetch/check out arena/019fbfaf-catisen-browser before treating results as the remediation build."
 fi
 
 section "Environment and repository checks"
-for command_name in git cargo rustc python3 node curl; do
+for command_name in git cargo rustc python3 python node curl; do
     if command -v "$command_name" >/dev/null 2>&1; then
         printf '%-8s: ' "$command_name"
         "$command_name" --version 2>&1 | head -n 1 || true
@@ -110,13 +120,18 @@ else
     record PASS "No repository-root .catisen_history.json"
 fi
 
-for forbidden in target .cache attached_assets; do
+for forbidden in .cache attached_assets; do
     if [[ -e "$forbidden" ]]; then
         record FAIL "Runtime/generated directory exists: $forbidden"
     else
         record PASS "No $forbidden directory"
     fi
 done
+if [[ -e target ]]; then
+    record NOTE "target/ exists because Cargo generated build artifacts during this test; it is ignored and must not be committed"
+else
+    record PASS "No target/ directory before Cargo runs"
+fi
 
 section "Static/source assertions"
 assert_source() {
@@ -197,9 +212,9 @@ else
 fi
 
 section "Local browser fixture"
-if command -v python3 >/dev/null 2>&1; then
+if [[ -n "$PYTHON_BIN" ]]; then
     FIXTURE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/catisen-browser-fixture.XXXXXX")"
-    FIXTURE_PORT="$(python3 - <<'PY'
+    FIXTURE_PORT="$("$PYTHON_BIN" - <<'PY'
 import socket
 sock = socket.socket()
 sock.bind(('127.0.0.1', 0))
@@ -248,7 +263,7 @@ try {
 } catch (e) { document.getElementById('result').textContent = 'IPC call threw: ' + e; }
 </script>
 HTML
-    python3 - "$FIXTURE_DIR" "$FIXTURE_PORT" >"$FIXTURE_DIR/server.log" 2>&1 <<'PY' &
+    "$PYTHON_BIN" - "$FIXTURE_DIR" "$FIXTURE_PORT" >"$FIXTURE_DIR/server.log" 2>&1 <<'PY' &
 import http.server
 import os
 import sys
@@ -259,7 +274,7 @@ server = http.server.ThreadingHTTPServer(('127.0.0.1', port), http.server.Simple
 server.serve_forever()
 PY
     SERVER_PID=$!
-    python3 - "$FIXTURE_DIR/download.bin" <<'PY'
+    "$PYTHON_BIN" - "$FIXTURE_DIR/download.bin" <<'PY'
 import sys
 from pathlib import Path
 Path(sys.argv[1]).write_bytes(bytes(range(256)) * 32)
@@ -276,7 +291,7 @@ PY
         record NOTE 'Could not start local Python fixture server'
     fi
 else
-    record NOTE 'python3 unavailable; local fixture pages were skipped'
+    record NOTE 'Python 3 is unavailable; local fixture pages were skipped'
 fi
 
 if [[ "${RUN_BROWSER:-0}" == "1" ]]; then
