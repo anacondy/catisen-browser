@@ -493,7 +493,7 @@ The user selected `arena/019f819c-catisen-browser` at `3489fcf` as the source ba
 - [ ] Symlink-safe atomic download commit across Windows and Unix under adversarial filesystem races.
 - [ ] CI workflow changes: GitHub rejected pushing workflow files because the configured GitHub App lacks `workflows` permission. No force push was attempted.
 
-Current remediation commit: `603f7f3` on `arena/019fbfaf-catisen-browser`.
+Remediation commits: `603f7f3` and `a887e13` on `arena/019fbfaf-catisen-browser`.
 
 ---
 
