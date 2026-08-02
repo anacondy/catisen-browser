@@ -22,8 +22,11 @@ pub fn normalize_url(input: &str) -> String {
     if !s.contains(' ') && (s.contains('.') || s.starts_with("localhost")) {
         return format!("https://{}", s);
     }
+    // Collapse runs of whitespace for the same address-bar behavior users
+    // expect from a search box, then let form_urlencoded escape punctuation.
+    let query = s.split_whitespace().collect::<Vec<_>>().join(" ");
     let q = url::form_urlencoded::Serializer::new(String::new())
-        .append_pair("q", s)
+        .append_pair("q", &query)
         .finish();
     format!("https://duckduckgo.com/?{q}")
 }
