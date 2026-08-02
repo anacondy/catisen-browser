@@ -61,6 +61,7 @@ impl SyncChain {
     }
 
     /// Pairing not implemented yet — must fail closed, not print fake success.
+    #[allow(dead_code)]
     pub fn pair_device(_phrase: &str) -> Result<(), String> {
         Err("not implemented".to_string())
     }

@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum FetchError {
     #[error("Tor proxy is not reachable at {proxy} ({route_source}).")]
@@ -43,6 +44,7 @@ pub enum FetchError {
     Reqwest(#[from] reqwest::Error),
 }
 
+#[allow(dead_code)]
 impl FetchError {
     pub fn is_retryable(&self) -> bool {
         match self {

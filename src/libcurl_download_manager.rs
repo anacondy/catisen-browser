@@ -19,6 +19,7 @@ pub struct DownloadManager {
     next_id: AtomicUsize,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Download {
     pub id: usize,
@@ -198,6 +199,7 @@ impl DownloadManager {
         });
     }
 
+    #[allow(dead_code)]
     pub fn pause_download(&mut self, id: usize) {
         if let Ok(downloads) = self.downloads.lock() {
             if let Some(download) = downloads.iter().find(|download| download.id == id) {
@@ -208,6 +210,7 @@ impl DownloadManager {
         }
     }
 
+    #[allow(dead_code)]
     pub fn resume_download(&mut self, id: usize) {
         let original = self
             .downloads
@@ -229,6 +232,7 @@ impl DownloadManager {
         self.start_download(&download.url, &download.path, download.tor_proxy);
     }
 
+    #[allow(dead_code)]
     pub fn get_progress(&self, id: usize) -> Option<f32> {
         let downloads = self.downloads.lock().ok()?;
         let download = downloads.iter().find(|download| download.id == id)?;

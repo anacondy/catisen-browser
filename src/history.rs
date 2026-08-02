@@ -172,7 +172,7 @@ impl HistoryEngine {
         // from overwriting a newer snapshot that was queued later.
         let lock = WRITE_LOCK.get_or_init(|| Mutex::new(()));
         let _guard = lock.lock().map_err(|_| {
-            std::io::Error::new(std::io::ErrorKind::Other, "history writer lock poisoned")
+            std::io::Error::other("history writer lock poisoned")
         })?;
         if sequence + 1 < WRITE_SEQUENCE.load(Ordering::Acquire) {
             return Ok(());
@@ -259,6 +259,7 @@ impl HistoryEngine {
         });
     }
 
+    #[allow(dead_code)]
     pub fn add_bookmark(&mut self, url: &str, title: &str) {
         if self.bookmarks.iter().any(|bookmark| bookmark.url == url) {
             return;
@@ -272,6 +273,7 @@ impl HistoryEngine {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_bookmarks(&self) -> &[Bookmark] {
         &self.bookmarks
     }

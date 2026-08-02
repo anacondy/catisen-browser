@@ -1,16 +1,11 @@
 use reqwest::{Client, Proxy};
 use std::time::Duration;
 
-pub fn build_client(proxy: Option<&str>) -> Result<Client, reqwest::Error> {
-    build_client_with_timeout(proxy, 30)
-}
-
 pub fn build_client_with_timeout(
     proxy: Option<&str>,
     timeout_secs: u64,
 ) -> Result<Client, reqwest::Error> {
     let mut headers = reqwest::header::HeaderMap::new();
-    // Keep HTTP headers aligned with the browser's normal desktop profile.
     headers.insert(
         reqwest::header::USER_AGENT,
         reqwest::header::HeaderValue::from_static(

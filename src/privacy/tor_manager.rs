@@ -51,7 +51,7 @@ fn is_local_port_open(port: u16) -> bool {
 }
 
 fn parse_proxy_host_port(proxy: &str) -> Option<(String, u16)> {
-    let no_scheme = proxy.split("://").last().unwrap_or(proxy);
+    let no_scheme = proxy.rsplit("://").next().unwrap_or(proxy);
     let host_port = no_scheme.rsplit('@').next().unwrap_or(no_scheme);
     let mut split = host_port.rsplitn(2, ':');
     let port = split.next()?.trim().parse::<u16>().ok()?;
@@ -74,20 +74,15 @@ fn is_proxy_endpoint_reachable(proxy: &str) -> bool {
         return true;
     }
 
-    let addr_string = format!("{}:{}", host, port);
-    if let Ok(addrs) = addr_string.to_socket_addrs() {
-        for addr in addrs {
-            if TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(600)).is_ok() {
-                return true;
-            }
-        }
-    }
-
-    false
-}
-
-pub fn detect_tor_proxy_status() -> TorProxyStatus {
-    detect_tor_proxy_status_for(None)
+    let addr_string = format!("{host}:{port}");
+    addr_string
+        .to_socket_addrs()
+        .map(|addrs| {
+            addrs.into_iter().any(|addr| {
+                TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(600)).is_ok()
+            })
+        })
+        .unwrap_or(false)
 }
 
 /// Resolve an optional config value while preserving the environment override.
@@ -107,15 +102,6 @@ pub fn detect_tor_proxy_status_for(configured: Option<&str>) -> TorProxyStatus {
         source,
         reachable,
     }
-}
-
-pub fn resolve_or_launch_tor_proxy() -> (String, String) {
-    let status = detect_tor_proxy_status();
-    (status.proxy, status.source)
-}
-
-pub fn resolve_tor_proxy() -> String {
-    configured_tor_proxy()
 }
 
 static LAST_TOR_PROBE_MS: AtomicU64 = AtomicU64::new(0);

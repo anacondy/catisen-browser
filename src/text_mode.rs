@@ -4,6 +4,7 @@
 // active WebView DOM. This module intentionally contains state only; the old
 // raw-HTML/Servo helper was dead code and diverged from the real browser path.
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReaderTheme {
     MentalityDark,
@@ -34,6 +35,7 @@ impl ReaderMode {
         self.is_enabled = enabled;
     }
 
+    #[allow(dead_code)]
     pub fn set_theme(&mut self, theme: ReaderTheme) {
         self.current_theme = theme;
     }

@@ -11,30 +11,6 @@ pub enum FingerprintLevel {
     Strict,
 }
 
-impl FingerprintLevel {
-    pub fn defaults(self) -> (bool, bool, bool) {
-        match self {
-            FingerprintLevel::Off => (false, false, false),
-            FingerprintLevel::Standard => (true, false, true),
-            FingerprintLevel::Strict => (true, true, true),
-        }
-    }
-
-    pub fn from_runtime_flags(
-        hardening_enabled: bool,
-        spoof_canvas_webgl: bool,
-        spoof_webdriver: bool,
-    ) -> Self {
-        if !hardening_enabled {
-            FingerprintLevel::Off
-        } else if spoof_canvas_webgl && spoof_webdriver {
-            FingerprintLevel::Strict
-        } else {
-            FingerprintLevel::Standard
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct CatisenConfig {
@@ -76,10 +52,6 @@ impl Default for CatisenConfig {
 impl CatisenConfig {
     pub fn config_path() -> PathBuf {
         Path::new("config.toml").to_path_buf()
-    }
-
-    pub fn load() -> Result<Self, ConfigError> {
-        Self::load_or_create()
     }
 
     pub fn load_or_create() -> Result<Self, ConfigError> {

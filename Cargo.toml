@@ -32,7 +32,6 @@ tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"
 # Utilities
 rand    = "0.8"
 chrono  = "0.4"
-scraper = "0.20"
 qrcode  = "0.14"
 image   = "0.25"
 # base64 is used to embed the SyncChain QR code PNG as a data URI in the WebView

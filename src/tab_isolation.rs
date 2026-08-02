@@ -12,6 +12,7 @@ static TAB_COUNTER: AtomicUsize = AtomicUsize::new(1);
 pub struct IsolatedTabContext {
     pub tab_id: usize,
     pub storage_path: String, // Path to a temporary isolated cookie jar
+    #[allow(dead_code)]
     pub is_isolated: bool,
 }
 
@@ -66,6 +67,7 @@ impl TabManager {
     /// Cleans up the temporary isolated profile when a tab is closed. The
     /// context records whether isolation was enabled when it was created, so
     /// disabling the setting later cannot accidentally skip cleanup.
+    #[allow(dead_code)]
     pub fn close_tab(&mut self, tab_id: usize) {
         if let Some(context) = self.active_tabs.remove(&tab_id) {
             if !context.is_isolated {

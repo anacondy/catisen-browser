@@ -80,6 +80,7 @@ impl AdBlocker {
     }
 
     /// Load from file path (replaces all current rules).
+    #[allow(dead_code)]
     pub fn load_filter_list(&mut self, file_path: &str) -> std::io::Result<()> {
         let text = std::fs::read_to_string(file_path)?;
         self.rules = text.lines().map(str::to_owned).collect();
