@@ -228,6 +228,7 @@ pub fn run(mut config: CatisenConfig) -> Result<(), Box<dyn std::error::Error>> 
     let window = WindowBuilder::new()
         .with_title("Catisen — Privacy Browser")
         .with_window_icon(catisen_window_icon())
+        .with_always_on_top(false)
         .with_resizable(true)
         .with_inner_size(LogicalSize::new(1280.0_f64, 720.0_f64))
         .with_min_inner_size(LogicalSize::new(800.0_f64, 450.0_f64))
@@ -557,6 +558,7 @@ window.setLoading = function() {
                     // Fullscreen::Borderless changes monitor size/position and can
                     // look like an unintended maximize operation.
                     window.set_decorations(!is_fullscreen);
+                    window.set_always_on_top(false);
                     window.set_resizable(!is_fullscreen);
                     let state = if is_fullscreen { "true" } else { "false" };
                     let _ = webview.evaluate_script(&format!(

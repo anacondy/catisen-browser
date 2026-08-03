@@ -457,45 +457,48 @@ html.__cat_native_fullscreen body { margin-top: 0 !important; }
      *   Ctrl+R               → Reader mode
      */
     document.addEventListener('keydown', function(e) {
+        // e.key becomes uppercase while Caps Lock is active. Normalize it so
+        // Ctrl+L/T/D and the other letter shortcuts remain reliable.
+        var key = String(e.key || '').toLowerCase();
         if (e.altKey && e.key === 'ArrowLeft')  { e.preventDefault(); ipc({ t: 'back' }); }
         if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); ipc({ t: 'fwd' }); }
         if (e.key === 'F5')                     { e.preventDefault(); ipc({ t: 'reload' }); }
-        if (e.key === 'F11' || e.key === 'Escape') {
+        if (key === 'f11' || key === 'escape') {
             // Escape only toggles when Catisen is currently borderless; in
             // normal pages it retains the site's usual Escape behavior.
-            if (e.key === 'F11' || document.documentElement.classList.contains('__cat_native_fullscreen')) {
+            if (key === 'f11' || document.documentElement.classList.contains('__cat_native_fullscreen')) {
                 e.preventDefault();
                 ipc({ t: 'fullscreen' });
             }
         }
 
-        if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+        if ((e.ctrlKey || e.metaKey) && key === 'l') {
             e.preventDefault();
             var el = document.getElementById('__cat_url');
             if (el) { el.focus(); el.select(); }
         }
         // Ctrl+T — open a new tab (previously unimplemented)
-        if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+        if ((e.ctrlKey || e.metaKey) && key === 't') {
             e.preventDefault();
             ipc({ t: 'newtab' });
         }
         // Ctrl+Tab — cycle to the next tab
         // (Full tab-bar UI is a future milestone; for now this opens a new tab
         //  so the shortcut does something meaningful rather than being swallowed.)
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+        if ((e.ctrlKey || e.metaKey) && key === 'tab') {
             e.preventDefault();
             ipc({ t: 'newtab' });
         }
         if ((e.ctrlKey || e.metaKey) && e.key === ',') {
             e.preventDefault(); ipc({ t: 'settings' });
         }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        if ((e.ctrlKey || e.metaKey) && key === 'd') {
             e.preventDefault(); ipc({ t: 'debug' });
         }
         // Reader mode moved off Ctrl+R: Ctrl+R is now left as native reload,
         // Ctrl+Shift+R as native hard-refresh (WebView2 accelerators, matching
         // standard browser behavior). Alt+R avoids both collisions.
-        if (e.altKey && (e.key === 'r' || e.key === 'R')) {
+        if (e.altKey && key === 'r') {
             e.preventDefault();
             ipc({ t: 'reader' });
             var btn = document.getElementById('__cb_reader');
