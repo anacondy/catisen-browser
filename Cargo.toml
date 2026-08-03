@@ -1,0 +1,48 @@
+[package]
+name = "catisen"
+version = "0.2.0"
+edition = "2021"
+description = "Privacy-focused browser with full DOM/BOM/JS rendering via WebKitGTK (Linux) / WebView2 (Windows)"
+license = "Apache-2.0"
+
+[dependencies]
+# Browser engine
+wry  = "0.38"
+tao  = "0.26"
+
+# Networking
+curl                 = "0.4"
+reqwest              = { version = "0.12", default-features = false, features = ["rustls-tls", "gzip", "brotli", "deflate", "cookies", "stream", "socks"] }
+reqwest_cookie_store = "0.9"
+rustls               = { version = "0.23", features = ["ring"] }
+url                  = "2"
+
+# Ad blocking
+adblock = { version = "0.12", default-features = false, features = ["embedded-domain-resolver", "full-regex-handling"] }
+
+# Serialisation
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml       = "0.8"
+thiserror  = "2"
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros", "fs"] }
+
+# Utilities
+rand    = "0.8"
+chrono  = "0.4"
+qrcode  = "0.14"
+image   = "0.25"
+# base64 is used to embed the SyncChain QR code PNG as a data URI in the WebView
+base64  = "0.22"
+
+# Windows-only
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["winuser", "jobapi2", "processthreadsapi", "winnt"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[features]
+default = []

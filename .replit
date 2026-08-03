@@ -1,0 +1,29 @@
+modules = ["rust-stable", "bash", "web"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Build & Run Catisen"
+
+[[workflows.workflow]]
+name = "Build & Run Catisen"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cargo run -- --headless"
+
+[workflows.workflow.metadata]
+outputType = "console"
