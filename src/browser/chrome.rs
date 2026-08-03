@@ -653,28 +653,10 @@ pub const YT_ADBLOCK_JS: &str = r#"
         } catch (_) {}
     }
 
-    // Keep the player box proportional to the actual media stream. YouTube
-    // can switch between 16:9, 4:3, and portrait clips; forcing every video
-    // into one fixed box is what creates the large empty side bars.
-    function fitYouTubeVideoFrame() {
-        var video = document.querySelector('video');
-        var player = video && (video.closest('.html5-video-player') || document.getElementById('movie_player'));
-        if (!video || !player || !video.videoWidth || !video.videoHeight) return;
-        player.style.setProperty('aspect-ratio', video.videoWidth + ' / ' + video.videoHeight, 'important');
-        player.style.setProperty('height', 'auto', 'important');
-    }
-    function watchYouTubeVideo() {
-        var video = document.querySelector('video');
-        if (video && !video.__catisenAspectHooked) {
-            video.__catisenAspectHooked = true;
-            video.addEventListener('loadedmetadata', fitYouTubeVideoFrame);
-            video.addEventListener('resize', fitYouTubeVideoFrame);
-        }
-        fitYouTubeVideoFrame();
-    }
+    // Keep this cosmetic only. Do not force the page/player height: YouTube
+    // controls its own responsive layout and a forced aspect ratio can move the
+    // video vertically or clip the controls for portrait/4:3 media.
     hideYouTubeAds();
-    watchYouTubeVideo();
-    setInterval(watchYouTubeVideo, 1000);
     if (document.documentElement) {
         new MutationObserver(hideYouTubeAds).observe(document.documentElement, {
             childList: true, subtree: true

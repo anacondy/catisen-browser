@@ -160,10 +160,10 @@ pub fn ipc_origin_allowed(uri: &str) -> bool {
     match url::Url::parse(uri) {
         Ok(parsed) => {
             let scheme = parsed.scheme().to_ascii_lowercase();
-            match scheme.as_str() {
-                "javascript" | "data" | "blob" | "file" | "about" => false,
-                _ => true,
-            }
+            !matches!(
+                scheme.as_str(),
+                "javascript" | "data" | "blob" | "file" | "about"
+            )
         }
         Err(_) => {
             // Unparseable platform URI — wry custom schemes etc. — allow

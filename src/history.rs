@@ -329,8 +329,10 @@ mod tests {
 
     #[test]
     fn disabled_history_persists_bookmarks_but_no_visits() {
-        let mut engine = HistoryEngine::default();
-        engine.save_history = false;
+        let mut engine = HistoryEngine {
+            save_history: false,
+            ..HistoryEngine::default()
+        };
         engine.visits.push(Visit {
             url: "https://example.com".to_string(),
             title: None,

@@ -228,7 +228,8 @@ pub fn run(mut config: CatisenConfig) -> Result<(), Box<dyn std::error::Error>> 
     let window = WindowBuilder::new()
         .with_title("Catisen — Privacy Browser")
         .with_window_icon(catisen_window_icon())
-        .with_inner_size(LogicalSize::new(1366.0_f64, 768.0_f64))
+        .with_resizable(true)
+        .with_inner_size(LogicalSize::new(1280.0_f64, 720.0_f64))
         .with_min_inner_size(LogicalSize::new(800.0_f64, 450.0_f64))
         .build(&event_loop)?;
 
@@ -326,7 +327,7 @@ window.setLoading = function() {
             .trim_start_matches("http://")
             .trim_start_matches("https://");
         let host_port = trimmed.split('/').next().unwrap_or(trimmed);
-        let host_port = host_port.split('@').last().unwrap_or(host_port);
+        let host_port = host_port.split('@').next_back().unwrap_or(host_port);
         if host_port.is_empty() {
             return None;
         }
@@ -356,7 +357,7 @@ window.setLoading = function() {
     let tor_required_for_navigation = active_tor_proxy.is_some();
     let mut webview_builder = WebViewBuilder::new(&window)
         .with_url(&home)
-        .with_user_agent(&ua)
+        .with_user_agent(ua)
         .with_initialization_script(&init_js);
 
     // §9.10: if Tor enabled, route WebView through SOCKS5 proxy via wry's with_proxy_config
@@ -556,6 +557,7 @@ window.setLoading = function() {
                     // Fullscreen::Borderless changes monitor size/position and can
                     // look like an unintended maximize operation.
                     window.set_decorations(!is_fullscreen);
+                    window.set_resizable(!is_fullscreen);
                     let state = if is_fullscreen { "true" } else { "false" };
                     let _ = webview.evaluate_script(&format!(
                         "if(window.__cat) window.__cat.setFullscreen({state});"
