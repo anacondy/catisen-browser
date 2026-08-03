@@ -482,6 +482,10 @@ The user selected `arena/019f819c-catisen-browser` at `3489fcf` as the source ba
 - [x] Added `scripts/test-browser.sh`, which records Cargo/static checks, external smoke probes, a local fixture server, and a numbered manual WebView2 test matrix.
 - [x] Reviewed the first Windows test log: fixed the sandbox format-string error and all four `ProxyEndpoint.port` type errors found by Cargo.
 - [x] The fixed branch was pushed without force-pushing or merging any pull request.
+- [x] Verified manual WebView2 behavior: app icon, video playback, F11/Fn+F11 title-bar-only mode, Escape exit, YouTube F behavior, and red Reader Mode links.
+- [x] Removed forced video aspect-ratio resizing after manual testing showed it could clip controls and move media vertically.
+- [x] Reduced the default window to 1280x720 and explicitly restored native resizing after borderless mode exits.
+- [x] Removed inactive duplicate helper APIs and reduced the Clippy dead-code surface.
 
 ### Not yet verified / still open
 

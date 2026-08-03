@@ -49,7 +49,9 @@ Windows WebView2 is the primary target. A Windows build requires the WebView2 Ru
 - WebView permission callbacks for camera, microphone, and notifications require platform-specific integration;
 - EasyList filtering remains best effort until resource interception supplies actual initiator and resource type for all subresources;
 - sync pairing transport and key exchange are not implemented;
-- a local Cargo/Rust verification pass is still required before release.
+- a local Cargo/Rust verification pass is still required before release;
+- F11/Fn+F11 uses title-bar-only borderless mode; resizing is intentionally disabled while decorations are hidden and restored on exit;
+- video players retain their own responsive aspect/layout; Catisen does not force a global video height because that can clip portrait/4:3 controls.
 
 ## Build and test
 
